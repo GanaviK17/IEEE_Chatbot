@@ -1,0 +1,43 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment credentials & local secrets (NEVER COMMIT)
+.env
+.env.local
+*.env
+!.env.example
+
+# Vector Database local storage & locks
+backend/data/chroma_db/
+backend/data/documents/
+backend/data/documents_catalog.json
+*.sqlite3
+*.sqlite3-journal
+
+# Node & Frontend dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.npm/
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
