@@ -22,7 +22,7 @@ load_dotenv(BASE_DIR / ".env")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "").strip()
 NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
 # Officially supported Nemotron models
-NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/llama-3.1-nemotron-70b-instruct")
+NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3.5-bolt-e4b")
 
 # RAG & Embedding configuration
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"

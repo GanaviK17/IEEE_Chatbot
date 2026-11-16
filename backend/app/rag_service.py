@@ -232,15 +232,31 @@ class RAGService:
                 timeout=25.0
             )
 
-            response = client.chat.completions.create(
-                model=NVIDIA_MODEL,
-                messages=messages,
-                temperature=0.2,
-                top_p=0.7,
-                max_tokens=512
-            )
+            primary_model = os.getenv("NVIDIA_MODEL", NVIDIA_MODEL)
+            try:
+                response = client.chat.completions.create(
+                    model=primary_model,
+                    messages=messages,
+                    temperature=0.2,
+                    top_p=0.7,
+                    max_tokens=768
+                )
+            except Exception as primary_err:
+                # If configured model is deprecated (e.g. 410) or unavailable, try bolt-e4b
+                logger.warning(f"Primary model {primary_model} call failed: {primary_err}. Attempting fallback to nemotron-3.5-bolt-e4b...")
+                response = client.chat.completions.create(
+                    model="nvidia/nemotron-3.5-bolt-e4b",
+                    messages=messages,
+                    temperature=0.2,
+                    top_p=0.7,
+                    max_tokens=768
+                )
 
-            generated_answer = response.choices[0].message.content.strip()
+            raw_content = response.choices[0].message.content
+            if raw_content and raw_content.strip():
+                generated_answer = raw_content.strip()
+            else:
+                raise ValueError("NVIDIA model returned empty content")
 
             return ChatResponse(
                 answer=generated_answer,
