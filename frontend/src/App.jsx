@@ -108,7 +108,6 @@ export default function App() {
     <div className="app-shell">
       <Header
         voiceHook={voiceHook}
-        onOpenAdmin={() => navigateTo('admin')}
       />
 
       <div className="app-body-layout">

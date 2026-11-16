@@ -1,10 +1,7 @@
 import React from 'react';
-import { Volume2, VolumeX, ShieldCheck } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 
-export default function Header({
-  voiceHook,
-  onOpenAdmin
-}) {
+export default function Header({ voiceHook }) {
   const { isAutoSpeakEnabled, setIsAutoSpeakEnabled, isSpeaking, stopSpeaking } = voiceHook;
 
   return (
@@ -38,19 +35,6 @@ export default function Header({
           {isAutoSpeakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
           <span className="voice-btn-label">{isAutoSpeakEnabled ? "Voice On" : "Voice Off"}</span>
         </button>
-
-        {/* Discrete Admin Portal Link */}
-        {onOpenAdmin && (
-          <button
-            className="admin-link-btn"
-            onClick={onOpenAdmin}
-            title="Administrator Portal"
-            aria-label="Admin Portal"
-          >
-            <ShieldCheck size={15} />
-            <span className="admin-btn-label">Admin</span>
-          </button>
-        )}
       </div>
     </header>
   );
