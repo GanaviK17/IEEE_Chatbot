@@ -8,6 +8,7 @@ class SourceItem(BaseModel):
     excerpt: str = Field(..., description="Extracted text chunk from document")
     similarity_score: float = Field(..., description="Relevance score (0 to 1)")
     source_url: Optional[str] = Field(None, description="Official source URL if available")
+    is_restricted: Optional[bool] = Field(default=False, description="Whether source is a restricted portal link")
 
 class MessageTurn(BaseModel):
     role: str = Field(..., description="Role: 'user' or 'assistant'")

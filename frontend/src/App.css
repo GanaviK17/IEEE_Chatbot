@@ -768,6 +768,46 @@
   color: var(--ieee-navy);
 }
 
+.source-title-link {
+  font-weight: 600;
+  color: var(--ieee-navy);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.source-title-link:hover {
+  color: var(--ieee-blue);
+  text-decoration: underline;
+}
+
+.source-link-icon {
+  color: var(--text-muted);
+}
+
+.source-restricted-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  margin-left: auto;
+  transition: all 0.15s ease;
+}
+
+.source-restricted-badge:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
 .source-page-text {
   background: #e2e8f0;
   padding: 1px 5px;

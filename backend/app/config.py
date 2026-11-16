@@ -27,8 +27,8 @@ NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3.5-bolt-e4b")
 # RAG & Embedding configuration
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 COLLECTION_NAME = "ieee_rag_knowledge_base"
-DEFAULT_TOP_K = 4
-SIMILARITY_THRESHOLD = 0.35  # Cosine similarity threshold for relevance
+DEFAULT_TOP_K = 5
+SIMILARITY_THRESHOLD = 0.25  # Cosine similarity threshold for relevance
 
 # Ingestion settings
 CHUNK_SIZE = 650  # Characters

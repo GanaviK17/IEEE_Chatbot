@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
 from app.config import (
     CHROMA_PERSIST_DIR,
     COLLECTION_NAME,
     EMBEDDING_MODEL_NAME,
     DATA_DIR
 )
+from sentence_transformers import SentenceTransformer
 
 # File to store document metadata registry
 CATALOG_PATH = os.path.join(DATA_DIR, "documents_catalog.json")
@@ -34,6 +34,19 @@ class VectorStoreManager:
             metadata={"hnsw:space": "cosine"}
         )
         self._load_catalog()
+
+    def clear_and_recreate_collection(self):
+        """Reset and recreate the ChromaDB collection."""
+        try:
+            self.chroma_client.delete_collection(COLLECTION_NAME)
+        except Exception:
+            pass
+        self.collection = self.chroma_client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"}
+        )
+        self.catalog = {}
+        self._save_catalog()
 
     @classmethod
     def get_instance(cls):
@@ -155,7 +168,8 @@ class VectorStoreManager:
                     "chunk_id": meta.get("chunk_id", ""),
                     "excerpt": text,
                     "similarity_score": round(similarity, 4),
-                    "source_url": meta.get("source_url", "")
+                    "source_url": meta.get("source_url", ""),
+                    "is_restricted": bool(meta.get("is_restricted", False))
                 })
 
         return retrieved_items

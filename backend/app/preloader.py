@@ -89,47 +89,23 @@ def chunk_corpus_document(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def preload_authentic_knowledge_base(force_reload: bool = False) -> Dict[str, Any]:
     """
-    Ensure the authentic IEEE knowledge base is ingested in ChromaDB.
+    Ensure the authentic IEEE web knowledge base is ingested in ChromaDB.
     Runs idempotently on backend startup.
     """
     vector_store = VectorStoreManager.get_instance()
-    existing_docs = {d["id"] for d in vector_store.list_documents()}
-
-    loaded_count = 0
-    total_new_chunks = 0
-
-    for doc in AUTHENTIC_IEEE_DOCUMENTS:
-        doc_id = doc["id"]
-        if not force_reload and doc_id in existing_docs:
-            continue
-
-        chunks = chunk_corpus_document(doc)
-        if not chunks:
-            continue
-
-        # If force reloading, remove old vectors first
-        if doc_id in existing_docs:
-            vector_store.delete_document(doc_id)
-
-        # Ingest chunks into ChromaDB
-        total_pages = max(s["page"] for s in doc["sections"])
-        indexed_chunks = vector_store.add_document_chunks(
-            doc_id=doc_id,
-            filename=doc["title"],
-            chunks=chunks,
-            total_pages=total_pages,
-            file_size_bytes=sum(len(s["text"].encode('utf-8')) for s in doc["sections"]),
-            source_url=doc["source_url"]
-        )
-
-        loaded_count += 1
-        total_new_chunks += indexed_chunks
-        print(f"Ingested '{doc['title']}': {indexed_chunks} chunks stored into ChromaDB.")
+    
+    # If collection is empty or forced, ingest from web directory and restricted links
+    if force_reload or vector_store.collection.count() == 0:
+        try:
+            from scripts.ingest_knowledge_base import ingest_all
+            ingest_all()
+        except Exception as e:
+            print(f"Warning: web ingestion script failed: {e}")
 
     stats = vector_store.get_stats()
     return {
-        "newly_loaded_documents": loaded_count,
-        "newly_loaded_chunks": total_new_chunks,
+        "newly_loaded_documents": 0,
+        "newly_loaded_chunks": 0,
         "total_documents": stats["total_documents"],
         "total_chunks": stats["total_chunks"]
     }

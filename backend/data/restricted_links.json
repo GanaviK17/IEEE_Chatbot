@@ -1,0 +1,102 @@
+[
+  {
+    "title": "IEEE Xplore Digital Library",
+    "url": "https://ieeexplore.ieee.org/",
+    "short_description": "IEEE Xplore provides full-text discovery and access to more than 6 million research papers, peer-reviewed journals, transactions, conference proceedings, technical standards, and educational courses.",
+    "topic_keywords": [
+      "research papers",
+      "ieeexplore",
+      "xplore",
+      "find papers",
+      "download paper",
+      "journal articles",
+      "conference proceedings",
+      "transactions",
+      "publications",
+      "literature search"
+    ]
+  },
+  {
+    "title": "IEEE Standards Association (IEEE-SA)",
+    "url": "https://standards.ieee.org/",
+    "short_description": "The official consensus building organization that develops globally recognized market-driven IEEE standards including IEEE 802.3 (Ethernet) and IEEE 802.11 (Wi-Fi).",
+    "topic_keywords": [
+      "standards",
+      "ieee standards",
+      "802.3",
+      "802.11",
+      "ethernet",
+      "wifi",
+      "wi-fi",
+      "ieee-sa",
+      "standardization",
+      "specifications"
+    ]
+  },
+  {
+    "title": "IEEE Membership Portal (Join & Renew)",
+    "url": "https://www.ieee.org/membership/join/index.html",
+    "short_description": "Official IEEE portal for creating membership accounts, joining IEEE as a professional or student member, selecting technical societies, and renewing annual memberships.",
+    "topic_keywords": [
+      "join ieee",
+      "membership application",
+      "renew membership",
+      "account login",
+      "student membership join",
+      "membership fees",
+      "sign up"
+    ]
+  },
+  {
+    "title": "IEEE Collabratec",
+    "url": "https://ieee-collabratec.ieee.org/",
+    "short_description": "IEEE Collabratec is an integrated online community and collaboration platform that connects global technology and engineering professionals for networking, authoring, and sharing research.",
+    "topic_keywords": [
+      "collabratec",
+      "professional network",
+      "online community",
+      "collaboration",
+      "authoring",
+      "networking"
+    ]
+  },
+  {
+    "title": "IEEE ResumeLab (Career Portal)",
+    "url": "https://www.ieee.org/membership/resumelab.html",
+    "short_description": "An exclusive career-building tool for IEEE members offering professional resume builders, portfolio templates, and mock interview practice.",
+    "topic_keywords": [
+      "resumelab",
+      "resume builder",
+      "career tools",
+      "mock interviews",
+      "portfolio",
+      "job search"
+    ]
+  },
+  {
+    "title": "IEEE Conferences Search Portal",
+    "url": "https://www.ieee.org/conferences/index.html",
+    "short_description": "Comprehensive searchable directory of over 1,900 international IEEE conferences, call for papers (CFP), submission deadlines, and conference proceedings.",
+    "topic_keywords": [
+      "conferences",
+      "call for papers",
+      "symposiums",
+      "submit paper",
+      "conference dates",
+      "ieee events"
+    ]
+  },
+  {
+    "title": "IEEE Technical Societies Directory",
+    "url": "https://www.ieee.org/communities/societies/index.html",
+    "short_description": "Official directory of the 39 specialized IEEE technical societies and councils spanning computer science, robotics, power systems, communications, and electronics.",
+    "topic_keywords": [
+      "technical societies",
+      "computer society",
+      "robotics society",
+      "communications society",
+      "power and energy",
+      "chapters"
+    ]
+  }
+]
