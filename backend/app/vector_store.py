@@ -19,21 +19,24 @@ class VectorStoreManager:
     _instance = None
 
     def __init__(self):
-        print(f"Initializing SentenceTransformer model: {EMBEDDING_MODEL_NAME}...")
+        print(f"Initializing SentenceTransformer model: {EMBEDDING_MODEL_NAME}...", flush=True)
         self.embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
         
-        print(f"Connecting to persistent ChromaDB at: {CHROMA_PERSIST_DIR}...")
+        print(f"Connecting to persistent ChromaDB at: {CHROMA_PERSIST_DIR}...", flush=True)
         self.chroma_client = chromadb.PersistentClient(
             path=CHROMA_PERSIST_DIR,
             settings=Settings(anonymized_telemetry=False, allow_reset=True)
         )
+        print("PersistentClient created, getting collection...", flush=True)
         
         # Get or create collection with cosine distance metric
         self.collection = self.chroma_client.get_or_create_collection(
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"}
         )
+        print("Collection retrieved, loading catalog...", flush=True)
         self._load_catalog()
+        print("VectorStoreManager initialized completely!", flush=True)
 
     def clear_and_recreate_collection(self):
         """Reset and recreate the ChromaDB collection."""

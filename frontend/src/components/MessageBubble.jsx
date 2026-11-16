@@ -49,43 +49,104 @@ export default function MessageBubble({
   const renderFormattedText = (text) => {
     if (!text) return null;
 
-    const paragraphs = text.split('\n\n');
-    return paragraphs.map((para, idx) => {
-      if (!para.trim()) return null;
+    // Normalize any stray inline asterisks or bullets that might be placed inline
+    const normalized = text
+      .replace(/(?<!\n)\s+[\*•]\s+/g, '\n• ')
+      .replace(/\r\n/g, '\n');
 
-      // Handle bullet lists within a paragraph
-      if (para.includes('\n• ') || para.includes('\n- ') || para.startsWith('• ') || para.startsWith('- ')) {
-        const lines = para.split('\n');
-        return (
-          <div key={idx} className="msg-para-group">
-            {lines.map((line, lIdx) => {
-              if (line.trim().startsWith('• ') || line.trim().startsWith('- ')) {
-                const item = line.trim().replace(/^[•\-]\s*/, '');
-                return <li key={lIdx} className="msg-bullet">{formatInlineText(item)}</li>;
-              }
-              return <p key={lIdx} className="msg-p">{formatInlineText(line)}</p>;
-            })}
-          </div>
+    const lines = normalized.split('\n');
+    const elements = [];
+    let currentList = [];
+
+    const flushList = () => {
+      if (currentList.length > 0) {
+        elements.push(
+          <ul key={`ul-${elements.length}`} className="msg-bullet-list">
+            {currentList.map((item, idx) => (
+              <li key={idx} className="msg-bullet">{formatInlineText(item)}</li>
+            ))}
+          </ul>
         );
+        currentList = [];
+      }
+    };
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        flushList();
+        return;
       }
 
-      return (
-        <p key={idx} className="msg-p">
-          {formatInlineText(para.trim())}
-        </p>
-      );
+      // Check if it's a bullet item
+      if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const itemContent = trimmed.replace(/^[•\-\*]\s*/, '');
+        currentList.push(itemContent);
+      } else {
+        flushList();
+        elements.push(
+          <p key={`p-${elements.length}`} className="msg-p">
+            {formatInlineText(trimmed)}
+          </p>
+        );
+      }
     });
+
+    flushList();
+    return elements;
   };
 
   const formatInlineText = (str) => {
-    const parts = str.split(/(\*\*.*?\*\*|`.*?`)/g);
+    if (!str) return '';
+    // Regex splits on markdown links [text](url), bold **text**, inline code `code`, or bare URLs
+    const regex = /(\[.*?\]\(https?:\/\/[^\s)]+\)|\*\*.*?\*\*|`.*?`|https?:\/\/[^\s)\]]+)/g;
+    const parts = str.split(regex);
+
     return parts.map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (!part) return null;
+
+      // Markdown link: [Title](https://...)
+      const mdLinkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s)]+)\)$/);
+      if (mdLinkMatch) {
+        const cleanTitle = mdLinkMatch[1].replace(/[\[\]]/g, '');
+        return (
+          <a
+            key={i}
+            href={mdLinkMatch[2]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="msg-link"
+          >
+            {cleanTitle}
+          </a>
+        );
+      }
+
+      // Bold: **text**
+      if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
         return <strong key={i}>{part.slice(2, -2)}</strong>;
       }
-      if (part.startsWith('`') && part.endsWith('`')) {
+
+      // Inline code: `code`
+      if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
         return <code key={i} className="msg-code">{part.slice(1, -1)}</code>;
       }
+
+      // Bare URL: https://...
+      if (part.startsWith('http://') || part.startsWith('https://')) {
+        return (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="msg-link"
+          >
+            {part}
+          </a>
+        );
+      }
+
       return part;
     });
   };

@@ -50,17 +50,20 @@ app.add_middleware(
 from app.preloader import preload_authentic_knowledge_base
 
 # Initialize singletons
+print("Loading vector_store singleton...", flush=True)
 vector_store = VectorStoreManager.get_instance()
+print("Loading rag_service singleton...", flush=True)
 rag_service = RAGService()
+print("Main module loaded successfully!", flush=True)
 
 @app.on_event("startup")
 def startup_event():
-    """Ensure authentic preloaded IEEE knowledge base is ingested on server start."""
+    """Verify knowledge base state on server start."""
     try:
-        res = preload_authentic_knowledge_base(force_reload=False)
-        print(f"Authentic IEEE Knowledge Base loaded: {res}")
+        count = vector_store.collection.count()
+        print(f"Server started successfully. Active knowledge base contains {count} chunks.", flush=True)
     except Exception as e:
-        print(f"Warning during preloading: {e}")
+        print(f"Warning during knowledge base verification: {e}", flush=True)
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 def health_check():
