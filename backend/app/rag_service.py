@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import random
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
 from app.config import (
@@ -19,15 +20,17 @@ SYSTEM_PROMPT = """You are the official IEEE AI Assistant, an authoritative, kno
 
 STRICT COMMUNICATION RULES:
 1. Speak directly, naturally, and professionally. Answer questions directly without hesitation.
-2. NEVER say or write meta-phrases like:
-   - "Based on the context I have"
-   - "Based on the provided documents / information"
-   - "According to the context"
-   - "From the context"
+2. ABSOLUTELY FORBIDDEN PHRASES - NEVER say, write, or imply:
+   - "The provided reference information"
+   - "Reference information"
+   - "Based on the reference information / context"
+   - "According to the reference / context"
+   - "From the provided context / reference"
    - "The provided context does not state"
+   - "The reference does not list"
    - "I cannot name a specific student branch"
    - "I was trained on" or "As an AI model"
-   Simply state the facts directly and conversationally as the assistant.
+   You represent IEEE directly: speak as a knowledgeable IEEE guide who already knows this information naturally.
 3. NEVER refuse to name specific branches, sections, chapters, or entities. If asked for a student branch in Canada (Region 7), name prominent branches such as the University of Toronto IEEE Student Branch, University of British Columbia (UBC) IEEE Student Branch, McGill University IEEE Student Branch, or University of Waterloo IEEE Student Branch.
 4. FORMATTING RULES:
    - Put each bullet item on its own new line starting with '• '. NEVER run multiple bullet points together on the same line with asterisks.
@@ -51,39 +54,30 @@ class RAGService:
             return ""
         return key
 
-    def _check_greeting_or_smalltalk(self, query: str) -> Optional[str]:
-        """Detect greeting, small talk, gratitude, or farewell and return friendly answer directly."""
+    def _is_greeting_or_smalltalk(self, query: str) -> bool:
+        """Detect greeting, small talk, gratitude, or farewell."""
         clean = query.strip().lower()
         clean_no_punct = re.sub(r"[^\w\s]", "", clean)
         words = clean_no_punct.split()
 
         if not words:
-            return "Hello! How can I assist you with IEEE today?"
+            return True
 
         first_word = words[0]
-        greeting_words = {"hi", "hello", "hey", "howdy", "sup", "greetings"}
+        greeting_words = {"hi", "hello", "hey", "howdy", "sup", "greetings", "yo"}
         thanks_words = {"thanks", "thank", "thx", "appreciate"}
-        bye_words = {"bye", "goodbye", "cya"}
+        bye_words = {"bye", "goodbye", "cya", "farewell"}
 
         if len(words) <= 3 and (first_word in greeting_words or "good morning" in clean_no_punct or "good afternoon" in clean_no_punct or "good evening" in clean_no_punct):
-            return (
-                "Hello! I am your IEEE Assistant, here to help students, researchers, and professionals. I can help you with:\n\n"
-                "• What IEEE stands for, history, and mission\n"
-                "• IEEE membership benefits and student discounts\n"
-                "• Joining or establishing an IEEE Student Branch\n"
-                "• Student competitions (IEEEXtreme), scholarships, and travel grants\n"
-                "• Technical standards like IEEE 802.11 (Wi-Fi) and 802.3 (Ethernet)\n"
-                "• Finding research papers on the IEEE Xplore Digital Library\n\n"
-                "What would you like to know about IEEE?"
-            )
+            return True
 
-        if any(w in thanks_words for w in words):
-            return "You're very welcome! If you have any more questions about IEEE membership, student branches, standards, or publications, feel free to ask!"
+        if any(w in thanks_words for w in words) and len(words) <= 4:
+            return True
 
-        if any(w in bye_words for w in words):
-            return "Goodbye! Have a great day, and feel free to reach back out whenever you need information on IEEE."
+        if any(w in bye_words for w in words) and len(words) <= 4:
+            return True
 
-        return None
+        return False
 
     def _rewrite_query(self, query: str) -> str:
         """Add domain-specific keywords and expansions to maximize semantic retrieval quality."""
@@ -139,18 +133,24 @@ class RAGService:
 
         clean = text.strip()
 
-        # 1. Filter out meta-phrases at beginning of sentences
-        meta_pattern = (
-            r"^(based on (the )?(provided )?(context|information|documents|reference|knowledge base)[,\s:]*|"
-            r"according to (the )?(provided )?(context|information|documents|reference)[,\s:]*|"
-            r"from the (provided )?(context|information|documents)[,\s:]*|"
-            r"as per the (provided )?(context|information|documents)[,\s:]*|"
-            r"in the (provided )?(context|information|documents)[,\s:]*)"
+        # 1. Eliminate any meta-sentences mentioning "reference information", "provided context", etc.
+        meta_sentence_pattern = (
+            r'(?i)\b(i cannot [^.\n]*because\s+)?(the\s+)?(provided\s+)?(reference(\s+information)?|context|documents?)\s*'
+            r'(describes?|states?(\s+that)?|mentions?|does not (list|state|contain|mention)|indicates?|shows?)[^.\n]*[\.:;]\s*'
         )
-        clean = re.sub(meta_pattern, "", clean, flags=re.IGNORECASE).strip()
+        clean = re.sub(meta_sentence_pattern, '', clean).strip()
+
+        leading_meta_pattern = (
+            r'^(based on (the )?(provided )?(context|information|documents|reference|knowledge base)[,\s:]*|'
+            r'according to (the )?(provided )?(context|information|documents|reference)[,\s:]*|'
+            r'from the (provided )?(context|information|documents|reference)[,\s:]*|'
+            r'as per the (provided )?(context|information|documents|reference)[,\s:]*|'
+            r'in the (provided )?(context|information|documents|reference)[,\s:]*|'
+            r'the provided (reference|context|document|information)[^.\n]*[,:\s]+)'
+        )
+        clean = re.sub(leading_meta_pattern, '', clean, flags=re.IGNORECASE).strip()
 
         # 2. Fix inline asterisks running together: e.g. "Text. * Item 1: ... * Item 2:" -> split to newlines
-        # Handle cases where bullet items are placed inline with ' * ' or ' \* ' or '* **'
         clean = re.sub(r'(?<!\n)\s+[\*•]\s+', '\n\n• ', clean)
         # Handle lines that start with '* ' or '- ' -> normalize to '• '
         clean = re.sub(r'(?m)^[\*\-]\s+', '• ', clean)
@@ -163,7 +163,6 @@ class RAGService:
         clean = re.sub(raw_url_filler_pattern, '', clean).strip()
 
         # 4. Convert remaining bare URLs into clean markdown links if not already markdown
-        # e.g., https://ieeexplore.ieee.org/ -> [IEEE Xplore](https://ieeexplore.ieee.org/)
         def replace_bare_url(match):
             url = match.group(0)
             if "ieeexplore" in url:
@@ -198,7 +197,7 @@ class RAGService:
         context_blocks = []
         for idx, item in enumerate(sources, 1):
             is_restr = item.get("is_restricted", False)
-            tag = "RESTRICTED LINK" if is_restr else "PAGE EXCERPT"
+            tag = "RESTRICTED PORTAL" if is_restr else "VERIFIED OVERVIEW"
             block = (
                 f"--- [SOURCE {idx}: {item['document_name']} ({tag})] ---\n"
                 f"URL: {item.get('source_url', 'https://www.ieee.org')}\n"
@@ -282,14 +281,57 @@ class RAGService:
         history: Optional[List[MessageTurn]] = None,
         top_k: int = DEFAULT_TOP_K
     ) -> ChatResponse:
-        """Execute complete RAG pipeline with greeting detection, query rewriting, and LLM generation."""
+        """Execute complete RAG pipeline with dynamic LLM greeting generation and rigorous anti-meta filtering."""
         q_clean = question.strip()
+        api_key = self._get_api_key()
 
-        # Step 1: Detect greetings / smalltalk before running retrieval
-        greeting_answer = self._check_greeting_or_smalltalk(q_clean)
-        if greeting_answer:
+        # Step 1: Detect greetings or small talk
+        if self._is_greeting_or_smalltalk(q_clean):
+            # If API key is available, generate a fresh, dynamic LLM greeting every time
+            if api_key:
+                try:
+                    client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=api_key, timeout=15.0)
+                    primary_model = os.getenv("NVIDIA_MODEL", NVIDIA_MODEL)
+                    greeting_messages = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are the IEEE AI Assistant, a friendly and knowledgeable guide for students, researchers, and engineers worldwide. "
+                                "Respond warmly, conversationally, and naturally to the user's greeting or small talk. "
+                                "Offer helpful ideas on what you can assist with (such as student branches, IEEE membership perks, scholarships, Wi-Fi 802.11 standards, or IEEE Xplore research papers). "
+                                "Keep it fresh, natural, concise, and engaging without sounding like a robotic template. Never use phrases like 'reference information'."
+                            )
+                        },
+                        {"role": "user", "content": q_clean}
+                    ]
+                    response = client.chat.completions.create(
+                        model=primary_model,
+                        messages=greeting_messages,
+                        temperature=0.7,
+                        top_p=0.9,
+                        max_tokens=256
+                    )
+                    raw_greeting = response.choices[0].message.content
+                    if raw_greeting and raw_greeting.strip():
+                        return ChatResponse(
+                            answer=self._post_process_answer(raw_greeting),
+                            sources=[],
+                            retrieved_chunks_count=0,
+                            model_used="IEEE Assistant",
+                            confidence_note=None
+                        )
+                except Exception as e:
+                    logger.warning(f"Dynamic LLM greeting call failed, falling back: {e}")
+
+            # Fallback dynamic greetings (randomized so it never feels canned)
+            fallback_greetings = [
+                "Hello! Welcome to the IEEE Assistant. I'm here to help you explore IEEE student branches, membership opportunities, technical standards, and research publications. How can I help you today?",
+                "Hi there! Glad you reached out. Whether you're curious about joining an IEEE student branch, looking up research papers on IEEE Xplore, or exploring technical societies, I'm ready to assist. What would you like to know?",
+                "Hey! Great to connect with you. I can help answer your questions about IEEE history, student competitions (like IEEEXtreme), scholarships, or Wi-Fi standards (802.11). Where would you like to begin?",
+                "Hello! I am your IEEE AI guide. How can I assist you with IEEE activities, student chapters, or engineering resources today?"
+            ]
             return ChatResponse(
-                answer=greeting_answer,
+                answer=random.choice(fallback_greetings),
                 sources=[],
                 retrieved_chunks_count=0,
                 model_used="IEEE Assistant",
@@ -323,8 +365,6 @@ class RAGService:
         for s in sources_list:
             logger.info(f"  -> Score: {s.similarity_score} | Doc: {s.document_name} | Restricted: {s.is_restricted}")
 
-        api_key = self._get_api_key()
-
         # If API key is not configured, use conversational synthesis
         if not api_key:
             answer_text = self._synthesize_conversational_fallback(q_clean, sources_list)
@@ -348,9 +388,14 @@ class RAGService:
                     messages.append({"role": turn.role, "content": turn.content})
 
         user_content = (
-            f"Reference Information:\n{context_str}\n\n"
-            f"Question: {q_clean}\n\n"
-            f"Please answer the question directly, factually, and conversationally. Do NOT say 'Based on the context', 'I cannot name', or similar phrases. Format each bullet point on its own new line starting with '• '. Format links as markdown links."
+            f"IEEE Knowledge Base Details:\n{context_str}\n\n"
+            f"User Question: {q_clean}\n\n"
+            f"Instructions:\n"
+            f"1. Answer the user directly, factually, and conversationally as the authoritative IEEE Assistant.\n"
+            f"2. NEVER use phrases like 'The provided reference information', 'reference information', 'the provided context', 'the reference does not state', or 'based on the context'.\n"
+            f"3. NEVER refuse by saying you cannot find or name something in the reference. If asked for branches, sections, or examples, name prominent ones directly from your IEEE knowledge.\n"
+            f"4. Format each bullet item on its own new line with '• '.\n"
+            f"5. Format hyperlinks cleanly using markdown."
         )
         messages.append({"role": "user", "content": user_content})
 
