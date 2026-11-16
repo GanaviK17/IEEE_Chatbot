@@ -1,88 +1,62 @@
 import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, ExternalLink, BookmarkCheck } from 'lucide-react';
+import { ExternalLink, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
 
 export default function SourceCitation({ sources }) {
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   if (!sources || sources.length === 0) {
     return null;
   }
 
-  const toggleExpand = (idx) => {
-    setExpandedIndex(expandedIndex === idx ? null : idx);
-  };
+  // Deduplicate by document name + page number
+  const uniqueSources = [];
+  const seen = new Set();
+  for (const s of sources) {
+    const key = `${s.document_name}_${s.page_number}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueSources.push(s);
+    }
+  }
 
   return (
-    <div className="source-citation-container">
-      <div className="source-citation-header">
-        <BookmarkCheck size={14} className="source-header-icon" />
-        <span>Verified Knowledge Base Citations ({sources.length}):</span>
-      </div>
+    <div className="subtle-source-container">
+      <button
+        className={`source-toggle-link ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+        title="View official IEEE source references"
+      >
+        <BookOpen size={12} className="source-icon" />
+        <span>Sources ({uniqueSources.length})</span>
+        {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+      </button>
 
-      <div className="source-chips-list">
-        {sources.map((source, idx) => {
-          const isExpanded = expandedIndex === idx;
-          const similarityPercent = Math.round(source.similarity_score * 100);
-
-          return (
-            <div key={source.chunk_id || idx} className="source-card">
-              <div className="source-chip-row">
-                <button
-                  className={`source-chip-btn ${isExpanded ? 'active' : ''}`}
-                  onClick={() => toggleExpand(idx)}
-                  title="Click to view verified source chunk excerpt"
-                >
-                  <div className="source-chip-left">
-                    <FileText size={13} className="source-file-icon" />
-                    <span className="source-doc-name">{source.document_name}</span>
-                    <span className="source-page-badge">Page {source.page_number}</span>
-                  </div>
-
-                  <div className="source-chip-right">
-                    <span className="similarity-badge" title="Semantic relevance score">
-                      {similarityPercent}% match
-                    </span>
-                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </div>
-                </button>
-
-                {source.source_url && (
+      {isOpen && (
+        <div className="subtle-source-card">
+          <ul className="subtle-source-list">
+            {uniqueSources.map((item, idx) => (
+              <li key={idx} className="subtle-source-item">
+                <span className="source-bullet">•</span>
+                <span className="source-title-text">{item.document_name}</span>
+                {item.page_number && (
+                  <span className="source-page-text">Page {item.page_number}</span>
+                )}
+                {item.source_url && (
                   <a
-                    href={source.source_url}
+                    href={item.source_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="source-external-btn"
-                    title={`Open official IEEE source: ${source.source_url}`}
+                    className="source-external-link"
+                    title={`Visit official IEEE source: ${item.source_url}`}
                   >
-                    <ExternalLink size={13} />
+                    View Source <ExternalLink size={10} />
                   </a>
                 )}
-              </div>
-
-              {isExpanded && (
-                <div className="source-excerpt-drawer">
-                  <div className="source-meta-row">
-                    <span className="meta-chunk-id">Chunk ID: <code>{source.chunk_id}</code></span>
-                    {source.source_url && (
-                      <a
-                        href={source.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="source-url-link"
-                      >
-                        {source.source_url.replace('https://', '').replace(/\/$/, '')} <ExternalLink size={11} />
-                      </a>
-                    )}
-                  </div>
-                  <div className="excerpt-content">
-                    <p>"{source.excerpt}"</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ export default function App() {
         setHealthData(data);
       }
     } catch (err) {
-      console.warn('Backend /health unreachable:', err);
+      console.warn('Backend connection notice:', err);
     }
   };
 
@@ -58,6 +58,12 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
+    // Build recent conversation turns for context in follow-up questions
+    const historyPayload = messages.slice(-4).map((m) => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text,
+    }));
+
     setMessages((prev) => [...prev, userMsg]);
     setIsLoadingChat(true);
 
@@ -65,13 +71,17 @@ export default function App() {
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, top_k: 4 }),
+        body: JSON.stringify({
+          message: text,
+          top_k: 4,
+          history: historyPayload
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.detail || 'Failed to generate answer');
+        throw new Error(data.detail || 'Unable to generate response');
       }
 
       const botMsg = {
@@ -79,8 +89,6 @@ export default function App() {
         sender: 'bot',
         text: data.answer,
         sources: data.sources || [],
-        modelUsed: data.model_used,
-        confidenceNote: data.confidence_note,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
@@ -89,7 +97,7 @@ export default function App() {
       const errorMsg = {
         id: 'err_' + Date.now(),
         sender: 'bot',
-        text: `Error generating response: ${err.message}. Please verify the backend is running at ${API_BASE_URL}.`,
+        text: "I'm temporarily unable to answer right now. Please try again in a moment.",
         isError: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -110,20 +118,16 @@ export default function App() {
   };
 
   const handleClearChat = () => {
-    if (window.confirm('Clear all conversation messages for this session?')) {
-      if (voiceHook.isSpeaking) {
-        voiceHook.stopSpeaking();
-      }
-      setMessages([]);
+    if (voiceHook.isSpeaking) {
+      voiceHook.stopSpeaking();
     }
+    setMessages([]);
   };
 
   return (
     <div className="app-shell">
       <Header
-        healthData={healthData}
         totalDocs={documents.length}
-        totalChunks={healthData?.chunks_count ?? 0}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         voiceHook={voiceHook}
@@ -153,7 +157,6 @@ export default function App() {
           onSendMessage={handleSendMessage}
           isLoading={isLoadingChat}
           onClearChat={handleClearChat}
-          documentsCount={documents.length}
           voiceHook={voiceHook}
         />
       </div>

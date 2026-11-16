@@ -1,5 +1,11 @@
 import os
 from pathlib import Path
+
+# Use cached local weights without network lookup delays
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 from dotenv import load_dotenv
 
 # Base paths

@@ -1,10 +1,8 @@
 import React from 'react';
-import { Database, Cpu, BookOpen, Layers, Menu, X, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, Menu, X } from 'lucide-react';
 
 export default function Header({
-  healthData,
   totalDocs,
-  totalChunks,
   isSidebarOpen,
   setIsSidebarOpen,
   voiceHook
@@ -17,7 +15,7 @@ export default function Header({
         <button
           className="mobile-toggle-btn"
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          aria-label="Toggle Document Manager"
+          aria-label="Toggle Navigation"
         >
           {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -27,33 +25,16 @@ export default function Header({
             <span>IEEE</span>
           </div>
           <div className="header-titles">
-            <h1 className="header-title">IEEE AI Assistant</h1>
-            <p className="header-subtitle">RAG Knowledge Engine • NVIDIA Nemotron</p>
+            <h1 className="header-title">IEEE Assistant</h1>
+            <p className="header-subtitle">Your student & professional guide</p>
           </div>
         </div>
       </div>
 
-      <div className="header-badges">
-        <div className="badge-item" title="ChromaDB Persistent Vector Database">
-          <Database size={14} className="badge-icon text-blue" />
-          <span>ChromaDB</span>
-          <span className="badge-count">{totalChunks} chunks</span>
-        </div>
-
-        <div className="badge-item" title="Local Dense Embedding Model">
-          <Layers size={14} className="badge-icon" />
-          <span>all-MiniLM-L6-v2</span>
-        </div>
-
-        <div className="badge-item highlight" title="NVIDIA Hosted Inference API">
-          <Cpu size={14} className="badge-icon" />
-          <span>Nemotron 70B</span>
-          <span className={`status-dot ${healthData?.api_key_configured ? 'active' : 'ready'}`}></span>
-        </div>
-
-        {/* Global Speaker Voice Toggle */}
+      <div className="header-actions">
+        {/* Voice Auto-Speak Toggle */}
         <button
-          className={`voice-header-btn ${isAutoSpeakEnabled ? 'active' : ''}`}
+          className={`voice-toggle-btn ${isAutoSpeakEnabled ? 'active' : ''}`}
           onClick={() => {
             const next = !isAutoSpeakEnabled;
             setIsAutoSpeakEnabled(next);
@@ -61,18 +42,21 @@ export default function Header({
               stopSpeaking();
             }
           }}
-          title={isAutoSpeakEnabled ? "Mute automatic speech" : "Enable automatic speech for answers"}
+          title={isAutoSpeakEnabled ? "Mute automatic speech" : "Read answers aloud"}
+          aria-label="Toggle Voice Output"
         >
           {isAutoSpeakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          <span className="voice-btn-label">{isAutoSpeakEnabled ? "Voice On" : "Voice Off"}</span>
         </button>
 
+        {/* Knowledge Base Drawer */}
         <button
           className={`sidebar-pill-btn ${isSidebarOpen ? 'active' : ''}`}
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          title="Open knowledge base documents & optional PDF upload"
+          title="Browse verified IEEE knowledge documents"
         >
           <BookOpen size={15} />
-          <span>Knowledge Base ({totalDocs})</span>
+          <span>Knowledge Base</span>
         </button>
       </div>
     </header>

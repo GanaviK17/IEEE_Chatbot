@@ -172,6 +172,7 @@ async def upload_document(file: UploadFile = File(...)):
     )
 
 @app.post("/chat", response_model=ChatResponse, tags=["Chat"])
+@app.post("/query", response_model=ChatResponse, tags=["Chat"])
 def chat(request: ChatRequest):
     """
     RAG Retrieval & Generation pipeline:
@@ -180,7 +181,7 @@ def chat(request: ChatRequest):
     3. Pass retrieved context & strict grounding prompt to NVIDIA Nemotron.
     4. Return context-aware response along with exact source attributions.
     """
-    query = request.message.strip()
+    query = request.get_query()
     if not query:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -190,6 +191,7 @@ def chat(request: ChatRequest):
     try:
         response = rag_service.generate_answer(
             question=query,
+            history=request.history,
             top_k=request.top_k
         )
         return response
