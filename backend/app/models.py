@@ -57,3 +57,14 @@ class HealthResponse(BaseModel):
     api_key_configured: bool
     documents_count: int
     chunks_count: int
+
+class AdminLoginRequest(BaseModel):
+    username: str = Field(..., description="Administrator username")
+    password: str = Field(..., description="Administrator password")
+
+class AdminLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    username: str
+    expires_in: int
+

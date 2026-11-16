@@ -1,53 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ChatArea from './components/ChatArea';
-import DocumentManager from './components/DocumentManager';
+import AdminPortal from './components/AdminPortal';
 import { useVoice } from './hooks/useVoice';
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:8000';
 
 export default function App() {
-  const [healthData, setHealthData] = useState(null);
-  const [documents, setDocuments] = useState([]);
-  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [currentView, setCurrentView] = useState(() => 
+    window.location.pathname.startsWith('/admin') ? 'admin' : 'chat'
+  );
   const [messages, setMessages] = useState([]);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const voiceHook = useVoice();
 
-  const fetchHealth = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/health`);
-      if (res.ok) {
-        const data = await res.json();
-        setHealthData(data);
-      }
-    } catch (err) {
-      console.warn('Backend connection notice:', err);
-    }
-  };
-
-  const fetchDocuments = async () => {
-    setIsLoadingDocs(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/documents`);
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.documents || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch documents:', err);
-    } finally {
-      setIsLoadingDocs(false);
-    }
-  };
-
+  // Listen to browser forward/back buttons for URL navigation
   useEffect(() => {
-    fetchHealth();
-    fetchDocuments();
+    const handlePopState = () => {
+      setCurrentView(window.location.pathname.startsWith('/admin') ? 'admin' : 'chat');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  const navigateTo = (view) => {
+    setCurrentView(view);
+    const targetPath = view === 'admin' ? '/admin' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+  };
 
   const handleSendMessage = async (text) => {
     const userMsgId = 'msg_' + Date.now();
@@ -58,7 +42,7 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    // Build recent conversation turns for context in follow-up questions
+    // Build recent conversation turns for multi-turn context
     const historyPayload = messages.slice(-4).map((m) => ({
       role: m.sender === 'user' ? 'user' : 'assistant',
       content: m.text,
@@ -68,7 +52,7 @@ export default function App() {
     setIsLoadingChat(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/chat`, {
+      const res = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,16 +91,6 @@ export default function App() {
     }
   };
 
-  const handleUploadSuccess = () => {
-    fetchDocuments();
-    fetchHealth();
-  };
-
-  const handleDeleteSuccess = (docId) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== docId));
-    fetchHealth();
-  };
-
   const handleClearChat = () => {
     if (voiceHook.isSpeaking) {
       voiceHook.stopSpeaking();
@@ -124,34 +98,20 @@ export default function App() {
     setMessages([]);
   };
 
+  // Render Admin Portal if path or state is /admin
+  if (currentView === 'admin') {
+    return <AdminPortal onBack={() => navigateTo('chat')} />;
+  }
+
+  // Render Public Chat Assistant (Knowledge base management completely removed)
   return (
     <div className="app-shell">
       <Header
-        totalDocs={documents.length}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
         voiceHook={voiceHook}
+        onOpenAdmin={() => navigateTo('admin')}
       />
 
       <div className="app-body-layout">
-        <div className={`sidebar-wrapper ${isSidebarOpen ? 'open' : ''}`}>
-          <DocumentManager
-            documents={documents}
-            onUploadSuccess={handleUploadSuccess}
-            onDeleteSuccess={handleDeleteSuccess}
-            isLoadingDocs={isLoadingDocs}
-            fetchDocuments={fetchDocuments}
-            onClose={() => setIsSidebarOpen(false)}
-          />
-        </div>
-
-        {isSidebarOpen && (
-          <div
-            className="sidebar-backdrop"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
         <ChatArea
           messages={messages}
           onSendMessage={handleSendMessage}

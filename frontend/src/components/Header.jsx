@@ -1,25 +1,15 @@
 import React from 'react';
-import { BookOpen, Volume2, VolumeX, Menu, X } from 'lucide-react';
+import { Volume2, VolumeX, ShieldCheck } from 'lucide-react';
 
 export default function Header({
-  totalDocs,
-  isSidebarOpen,
-  setIsSidebarOpen,
-  voiceHook
+  voiceHook,
+  onOpenAdmin
 }) {
   const { isAutoSpeakEnabled, setIsAutoSpeakEnabled, isSpeaking, stopSpeaking } = voiceHook;
 
   return (
     <header className="ieee-header">
       <div className="header-left">
-        <button
-          className="mobile-toggle-btn"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          aria-label="Toggle Navigation"
-        >
-          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-
         <div className="ieee-logo-badge">
           <div className="ieee-diamond">
             <span>IEEE</span>
@@ -49,15 +39,18 @@ export default function Header({
           <span className="voice-btn-label">{isAutoSpeakEnabled ? "Voice On" : "Voice Off"}</span>
         </button>
 
-        {/* Knowledge Base Drawer */}
-        <button
-          className={`sidebar-pill-btn ${isSidebarOpen ? 'active' : ''}`}
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          title="Browse verified IEEE knowledge documents"
-        >
-          <BookOpen size={15} />
-          <span>Knowledge Base</span>
-        </button>
+        {/* Discrete Admin Portal Link */}
+        {onOpenAdmin && (
+          <button
+            className="admin-link-btn"
+            onClick={onOpenAdmin}
+            title="Administrator Portal"
+            aria-label="Admin Portal"
+          >
+            <ShieldCheck size={15} />
+            <span className="admin-btn-label">Admin</span>
+          </button>
+        )}
       </div>
     </header>
   );

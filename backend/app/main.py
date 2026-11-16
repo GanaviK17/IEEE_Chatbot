@@ -1,7 +1,7 @@
 import os
 import shutil
 from typing import List
-from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import (
     ALLOWED_EXTENSIONS,
@@ -18,7 +18,15 @@ from app.models import (
     ChatResponse,
     DocumentListResponse,
     DocumentInfo,
-    UploadResponse
+    UploadResponse,
+    AdminLoginRequest,
+    AdminLoginResponse
+)
+from app.auth import (
+    get_current_admin,
+    verify_admin_password,
+    create_admin_token,
+    ADMIN_USERNAME
 )
 from app.document_processor import extract_and_chunk_pdf
 from app.vector_store import VectorStoreManager
@@ -73,11 +81,58 @@ def health_check():
         chunks_count=stats["total_chunks"]
     )
 
-@app.post("/upload", response_model=UploadResponse, tags=["Documents"])
-async def upload_document(file: UploadFile = File(...)):
+# ==============================================================================
+# Admin Authentication & Management Routes
+# ==============================================================================
+
+@app.post("/admin/login", response_model=AdminLoginResponse, tags=["Admin"])
+def admin_login(creds: AdminLoginRequest):
+    """
+    Authenticate administrator credentials and return signed JWT token.
+    """
+    if creds.username != ADMIN_USERNAME or not verify_admin_password(creds.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid administrator username or password."
+        )
+    return create_admin_token(creds.username)
+
+@app.get("/admin/verify", tags=["Admin"])
+def admin_verify(admin: str = Depends(get_current_admin)):
+    """
+    Verify administrator JWT session validity.
+    """
+    return {"valid": True, "username": admin}
+
+@app.post("/admin/reindex", tags=["Admin"])
+def admin_reindex(admin: str = Depends(get_current_admin)):
+    """
+    Admin-only endpoint to reload and re-index the authentic IEEE knowledge base into ChromaDB.
+    """
+    try:
+        result = preload_authentic_knowledge_base(force_reload=True)
+        return {
+            "message": "Knowledge base re-indexing complete.",
+            "details": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Re-indexing failed: {str(e)}"
+        )
+
+# ==============================================================================
+# Protected Document Management Routes (Admin Only)
+# ==============================================================================
+
+@app.post("/upload", response_model=UploadResponse, tags=["Admin Documents"])
+async def upload_document(
+    file: UploadFile = File(...),
+    admin: str = Depends(get_current_admin)
+):
     """
     Accept, validate, extract, chunk, embed, and store an IEEE PDF document into ChromaDB.
-    Preserves document name, page numbers, and chunk identifiers.
+    Protected: Requires administrator JWT authentication.
     """
     # 1. Validate file extension
     filename = file.filename or "unknown.pdf"
@@ -201,9 +256,12 @@ def chat(request: ChatRequest):
             detail=f"Error generating RAG response: {str(e)}"
         )
 
-@app.get("/documents", response_model=DocumentListResponse, tags=["Documents"])
-def get_documents():
-    """List all uploaded documents and their ingestion statistics."""
+@app.get("/documents", response_model=DocumentListResponse, tags=["Admin Documents"])
+def get_documents(admin: str = Depends(get_current_admin)):
+    """
+    List all uploaded documents and their ingestion statistics.
+    Protected: Requires administrator JWT authentication.
+    """
     docs_list = vector_store.list_documents()
     stats = vector_store.get_stats()
     
@@ -226,9 +284,15 @@ def get_documents():
         total_chunks=stats["total_chunks"]
     )
 
-@app.delete("/documents/{document_id}", tags=["Documents"])
-def delete_document(document_id: str):
-    """Remove a document and its stored vectors completely from ChromaDB."""
+@app.delete("/documents/{document_id}", tags=["Admin Documents"])
+def delete_document(
+    document_id: str,
+    admin: str = Depends(get_current_admin)
+):
+    """
+    Remove a document and its stored vectors completely from ChromaDB.
+    Protected: Requires administrator JWT authentication.
+    """
     existing = vector_store.catalog.get(document_id)
     if not existing:
         raise HTTPException(
