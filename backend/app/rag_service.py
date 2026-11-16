@@ -14,8 +14,27 @@ from app.models import SourceItem, ChatResponse, MessageTurn
 
 logger = logging.getLogger(__name__)
 
-# Polished, friendly, natural IEEE Assistant system prompt
-SYSTEM_PROMPT = """You are the IEEE Assistant, an exhaustive and friendly guide for students, researchers, and professionals. Use the provided context first. For greetings, small talk, or well-known general facts about IEEE (including geographic structure, regions, sections, subsections, councils, and student branches like NISB), answer naturally from your knowledge. If a topic is private, requires payment, or is paywalled (e.g. specific full standards, research papers, or certifications), clearly explain what the resource covers and provide the direct official source link so the user can open or access it directly on ieee.org. Keep answers concise, factual, and conversational. Never say 'the provided context does not state'."""
+# Polished, authoritative, natural IEEE Assistant system prompt
+SYSTEM_PROMPT = """You are the official IEEE AI Assistant, an authoritative, knowledgeable, and friendly guide for students, researchers, faculty, and engineers worldwide.
+
+STRICT COMMUNICATION RULES:
+1. Speak directly, naturally, and professionally. Answer questions directly without hesitation.
+2. NEVER say or write phrases like:
+   - "Based on the context I have"
+   - "Based on the provided documents / information"
+   - "According to the context"
+   - "From the context"
+   - "The provided context does not state"
+   - "I was trained on" or "As an AI model"
+   Simply state the facts directly and conversationally as the assistant.
+3. You have comprehensive knowledge of all aspects of IEEE:
+   - The 10 geographic regions, sections, subsections, councils, and all kinds of branches (Student Branches like NISB, Student Branch Chapters, WIE/SIGHT Affinity Groups, ExeCom roles, Counselor duties, and vTools reporting).
+   - All 39 technical societies and 7 technical councils.
+   - Membership grades, elevation (Senior Member, Fellow), and benefits.
+   - Competitions (IEEEXtreme), scholarships (Merwin, Fortescue, PES), and travel grants.
+   - Standards (IEEE 802.11 Wi-Fi, 802.3 Ethernet, etc.).
+4. If a specific standard, full paper, or service is paywalled or requires payment/subscription, explain clearly what it is and share the official direct link (e.g., https://ieeexplore.ieee.org/, https://standards.ieee.org/) so the user can open it directly on ieee.org.
+5. Provide rich, helpful, well-structured answers using clear bullet points and bolding where appropriate."""
 
 class RAGService:
     def __init__(self):
@@ -79,9 +98,9 @@ class RAGService:
         if any(phrase in q_lower for phrase in ["802.11", "wifi", "wi-fi", "wireless lan"]):
             return f"{q} IEEE 802.11 Wireless LAN Wi-Fi standard specifications"
 
-        # Student Branch
-        if "student branch" in q_lower or "join branch" in q_lower:
-            return f"{q} IEEE student branches membership benefits campus form student branch"
+        # Student Branch and All Kinds of Branches
+        if any(term in q_lower for term in ["branch", "branches", "kinds of branches", "types of branches"]):
+            return f"{q} IEEE Student Branch SB Student Branch Chapter SBC Affinity Group WIE SIGHT ExeCom Counselor"
 
         # NISB / NIE IEEE Student Branch
         if "nisb" in q_lower or "nie ieee" in q_lower:
@@ -238,9 +257,9 @@ class RAGService:
                     messages.append({"role": turn.role, "content": turn.content})
 
         user_content = (
-            f"Retrieved IEEE Knowledge Base Context:\n{context_str}\n\n"
-            f"User Question: {q_clean}\n\n"
-            f"Answer the user's question clearly, helpfully, and conversationally based on the instructions."
+            f"Reference Information:\n{context_str}\n\n"
+            f"Question: {q_clean}\n\n"
+            f"Please answer the question directly, factually, and conversationally. Do NOT say 'Based on the context' or similar phrases."
         )
         messages.append({"role": "user", "content": user_content})
 
@@ -273,7 +292,19 @@ class RAGService:
 
             raw_content = response.choices[0].message.content
             if raw_content and raw_content.strip():
-                generated_answer = raw_content.strip()
+                clean_text = raw_content.strip()
+                # Programmatically filter out any accidental meta-phrases
+                meta_pattern = (
+                    r"^(based on (the )?(provided )?(context|information|documents|reference|knowledge base)[,\s:]*|"
+                    r"according to (the )?(provided )?(context|information|documents|reference)[,\s:]*|"
+                    r"from the (provided )?(context|information|documents)[,\s:]*|"
+                    r"as per the (provided )?(context|information|documents)[,\s:]*|"
+                    r"in the (provided )?(context|information|documents)[,\s:]*)"
+                )
+                clean_text = re.sub(meta_pattern, "", clean_text, flags=re.IGNORECASE).strip()
+                if clean_text and clean_text[0].islower():
+                    clean_text = clean_text[0].upper() + clean_text[1:]
+                generated_answer = clean_text
             else:
                 raise ValueError("NVIDIA model returned empty content")
 
