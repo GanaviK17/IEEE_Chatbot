@@ -17,6 +17,58 @@
     ]
   },
   {
+    "title": "NISB - NIE IEEE Student Branch Official Portal",
+    "url": "https://nisb.in/",
+    "short_description": "Official portal of the NIE IEEE Student Branch (NISB) at The National Institute of Engineering, Mysuru, Karnataka, India. Established in 1999 under the IEEE Bangalore Section and IEEE Mysore Subsection, organizing Adroit, Ankura, WIE events, and technical workshops.",
+    "topic_keywords": [
+      "nisb",
+      "nie ieee",
+      "nie ieee student branch",
+      "national institute of engineering",
+      "adroit",
+      "ankura",
+      "mysuru student branch",
+      "mysore student branch"
+    ]
+  },
+  {
+    "title": "IEEE Bangalore Section",
+    "url": "https://ieeebangalore.org/",
+    "short_description": "One of the premier and most active IEEE Sections in Region 10 (Asia-Pacific), founded in 1976. Oversees Student Branches, Subsections (Mysore, Mangalore, North Karnataka), and technical society chapters across Karnataka.",
+    "topic_keywords": [
+      "bangalore section",
+      "ieee bangalore",
+      "karnataka section",
+      "mysore subsection",
+      "mangalore subsection",
+      "north karnataka subsection"
+    ]
+  },
+  {
+    "title": "IEEE Region 10 (Asia-Pacific)",
+    "url": "https://www.ieeer10.org/",
+    "short_description": "IEEE Region 10 (R10) covers the Asia-Pacific area, spanning India, China, Japan, Australia, New Zealand, Singapore, and Southeast Asia, serving hundreds of thousands of members and student branches.",
+    "topic_keywords": [
+      "region 10",
+      "r10",
+      "asia pacific",
+      "ieee r10",
+      "india council"
+    ]
+  },
+  {
+    "title": "IEEE vTools Portal",
+    "url": "https://vtools.ieee.org/",
+    "short_description": "Official IEEE organizational and management platform used by Student Branches, Sections, Subsections, and Chapters to record meetings, officer elections, activity reports, and event registrations.",
+    "topic_keywords": [
+      "vtools",
+      "student branch reporting",
+      "officer reporting",
+      "agm report",
+      "event reporting"
+    ]
+  },
+  {
     "title": "IEEE Standards Association (IEEE-SA)",
     "url": "https://standards.ieee.org/",
     "short_description": "The official consensus building organization that develops globally recognized market-driven IEEE standards including IEEE 802.3 (Ethernet) and IEEE 802.11 (Wi-Fi).",

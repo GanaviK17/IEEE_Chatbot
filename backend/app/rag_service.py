@@ -15,7 +15,7 @@ from app.models import SourceItem, ChatResponse, MessageTurn
 logger = logging.getLogger(__name__)
 
 # Polished, friendly, natural IEEE Assistant system prompt
-SYSTEM_PROMPT = """You are the IEEE Assistant, a friendly guide for students and professionals. Use the provided context first. For greetings, small talk, or well-known general facts about IEEE, answer naturally from your own knowledge. If a retrieved source is a restricted link, briefly explain what it covers and share the link so the user can open it directly on ieee.org. If the answer is unclear, say so briefly and suggest checking ieee.org. Keep answers concise and conversational. Never say 'the provided context does not state'."""
+SYSTEM_PROMPT = """You are the IEEE Assistant, an exhaustive and friendly guide for students, researchers, and professionals. Use the provided context first. For greetings, small talk, or well-known general facts about IEEE (including geographic structure, regions, sections, subsections, councils, and student branches like NISB), answer naturally from your knowledge. If a topic is private, requires payment, or is paywalled (e.g. specific full standards, research papers, or certifications), clearly explain what the resource covers and provide the direct official source link so the user can open or access it directly on ieee.org. Keep answers concise, factual, and conversational. Never say 'the provided context does not state'."""
 
 class RAGService:
     def __init__(self):
@@ -83,9 +83,21 @@ class RAGService:
         if "student branch" in q_lower or "join branch" in q_lower:
             return f"{q} IEEE student branches membership benefits campus form student branch"
 
+        # NISB / NIE IEEE Student Branch
+        if "nisb" in q_lower or "nie ieee" in q_lower:
+            return f"{q} NISB NIE IEEE Student Branch National Institute of Engineering Mysuru Bangalore Section Mysore Subsection Adroit Ankura"
+
+        # Sections, Subsections, Councils, Regions
+        if any(term in q_lower for term in ["section", "subsection", "region", "council", "bangalore", "mysore", "mysuru"]):
+            return f"{q} IEEE geographic organization 10 regions sections subsections councils Bangalore Section Mysore Subsection"
+
         # Student opportunities / scholarships / competitions
         if any(term in q_lower for term in ["opportunit", "scholarship", "competition", "competitions", "extreme"]):
             return f"{q} IEEE student opportunities competitions IEEEXtreme scholarships awards travel grants"
+
+        # Technical societies
+        if any(term in q_lower for term in ["society", "societies", "comsoc", "computer society", "pes", "ras"]):
+            return f"{q} 39 IEEE Technical Societies and Councils Computer Society PES Communications Robotics"
 
         return q
 
@@ -112,6 +124,25 @@ class RAGService:
 
         if "full form" in q_lower or "stands for" in q_lower:
             return "The full form of IEEE is the **Institute of Electrical and Electronics Engineers** (pronounced 'Eye-triple-E'). It is the world's largest technical professional organization dedicated to advancing technology for the benefit of humanity."
+
+        if "nisb" in q_lower or "nie ieee" in q_lower:
+            return (
+                "**NISB** stands for the **NIE IEEE Student Branch**, the official student branch at The National Institute of Engineering (NIE), Mysuru, Karnataka, India.\n\n"
+                "• **History:** Established in 1999, it is one of the oldest, largest, and most active student branches in IEEE Region 10 (Asia-Pacific).\n"
+                "• **Parent Section & Subsection:** Operates under the **IEEE Bangalore Section** and **IEEE Mysore Subsection**.\n"
+                "• **Flagship Events:** Organizes *Adroit* (annual state/national technical fest), *Ankura* (flagship Women in Engineering initiative), hackathons, code jams, and tech workshops.\n"
+                "• **Chapters:** Houses an IEEE Women in Engineering (WIE) Affinity Group, Computer Society (CS) Chapter, and Power & Energy Society (PES) Chapter.\n\n"
+                "You can explore more on their official website: [nisb.in](https://nisb.in/)."
+            )
+
+        if "section" in q_lower or "subsection" in q_lower or "region" in q_lower:
+            return (
+                "IEEE organizes its global activities across a hierarchy of geographic units:\n\n"
+                "• **10 Geographic Regions:** From Regions 1–6 (USA) to Region 10 (Asia-Pacific, including India, China, Japan, Australia).\n"
+                "• **Sections:** Over 340 local geographic units globally (e.g. IEEE Bangalore Section, Bombay Section, Delhi Section, Madras Section) that provide local grants, conferences, and student branch oversight.\n"
+                "• **Subsections:** Regional units formed under large Sections to cater to specific cities (such as the IEEE Mysore Subsection and IEEE Mangalore Subsection under the Bangalore Section).\n"
+                "• **Student Branches:** Established at accredited colleges and universities (e.g., NISB at NIE Mysuru) governed by their local Section and Subsection."
+            )
 
         if "when" in q_lower and ("established" in q_lower or "founded" in q_lower or "start" in q_lower):
             return "IEEE was established on January 1, 1963, through the merger of two pioneering engineering societies: the American Institute of Electrical Engineers (AIEE, founded in 1884) and the Institute of Radio Engineers (IRE, founded in 1912)."
