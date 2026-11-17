@@ -52,6 +52,9 @@ COMMUNICATION PRINCIPLES:
 class RAGService:
     def __init__(self):
         self.vector_store = VectorStoreManager.get_instance()
+        self._llm_client: Optional[OpenAI] = None
+        self._cached_api_key: str = ""
+        self._response_cache: Dict[str, ChatResponse] = {}
 
     def _get_api_key(self) -> str:
         """Fetch API key dynamically from environment to pick up updates without server restart."""
@@ -59,6 +62,18 @@ class RAGService:
         if key == "YOUR_NVIDIA_API_KEY_HERE" or key.startswith("your_"):
             return ""
         return key
+
+    def _get_llm_client(self, api_key: str) -> OpenAI:
+        """Reuse persistent OpenAI client to maintain HTTP connection pool across calls."""
+        if self._llm_client is None or self._cached_api_key != api_key:
+            self._llm_client = OpenAI(
+                base_url=NVIDIA_BASE_URL,
+                api_key=api_key,
+                timeout=12.0,
+                max_retries=1
+            )
+            self._cached_api_key = api_key
+        return self._llm_client
 
     def classify_intent(self, query: str, history: Optional[List[MessageTurn]] = None) -> str:
         """
@@ -507,15 +522,11 @@ class RAGService:
         self,
         messages: List[Dict[str, str]],
         api_key: str,
-        max_tokens: int = 400,
+        max_tokens: int = 220,
         temperature: float = 0.3
     ) -> str:
-        """Call NVIDIA Nemotron with automatic model fallback."""
-        client = OpenAI(
-            base_url=NVIDIA_BASE_URL,
-            api_key=api_key,
-            timeout=25.0
-        )
+        """Call NVIDIA Nemotron with persistent connection pooling and intelligent fallback."""
+        client = self._get_llm_client(api_key)
         primary_model = os.getenv("NVIDIA_MODEL", NVIDIA_MODEL)
         try:
             response = client.chat.completions.create(
@@ -526,14 +537,19 @@ class RAGService:
                 max_tokens=max_tokens
             )
         except Exception as primary_err:
-            logger.warning(f"Primary model {primary_model} call failed: {primary_err}. Attempting fallback...")
-            response = client.chat.completions.create(
-                model="nvidia/nemotron-3.5-bolt-e4b",
-                messages=messages,
-                temperature=temperature,
-                top_p=0.8,
-                max_tokens=max_tokens
-            )
+            fallback_model = "nvidia/nemotron-3.5-bolt-e4b"
+            err_msg = str(primary_err).lower()
+            if primary_model != fallback_model and "connection" not in err_msg and "auth" not in err_msg:
+                logger.warning(f"Primary model {primary_model} call failed: {primary_err}. Attempting fallback...")
+                response = client.chat.completions.create(
+                    model=fallback_model,
+                    messages=messages,
+                    temperature=temperature,
+                    top_p=0.8,
+                    max_tokens=max_tokens
+                )
+            else:
+                raise primary_err
 
         content = response.choices[0].message.content
         if not content or not content.strip():
@@ -556,7 +572,22 @@ class RAGService:
         """
         q_clean = question.strip()
         api_key = self._get_api_key()
+
+        # Fast in-memory response cache check for standalone questions
+        cache_key = ""
+        if not history:
+            cache_key = re.sub(r"[^\w\s]", "", q_clean.lower()).strip()
+            if cache_key in self._response_cache:
+                logger.info(f"Serving cached response for '{q_clean}'")
+                return self._response_cache[cache_key]
+
         intent = self.classify_intent(q_clean, history)
+
+        def _finish(resp: ChatResponse) -> ChatResponse:
+            if cache_key and resp and not resp.answer.startswith("I could not find"):
+                if len(self._response_cache) < 500:
+                    self._response_cache[cache_key] = resp
+            return resp
 
         logger.info(f"Classified query '{q_clean}' as intent: {intent}")
 
@@ -568,13 +599,13 @@ class RAGService:
                 "I'm not quite sure I understood that. Could you please clarify what you'd like to know "
                 "about IEEE, its student programs, technical standards, or research resources?"
             )
-            return ChatResponse(
+            return _finish(ChatResponse(
                 answer=clarify_text,
                 sources=[],
                 retrieved_chunks_count=0,
                 model_used="IEEE Assistant",
                 confidence_note=None
-            )
+            ))
 
         # ----------------------------------------------------------------------
         # Case B: Off-topic input -> polite scope boundary without hallucinations
@@ -585,13 +616,13 @@ class RAGService:
                 "student branches, research publications on IEEE Xplore, and membership opportunities. "
                 "If you have any questions in those areas, I'd be happy to help!"
             )
-            return ChatResponse(
+            return _finish(ChatResponse(
                 answer=off_topic_text,
                 sources=[],
                 retrieved_chunks_count=0,
                 model_used="IEEE Assistant",
                 confidence_note=None
-            )
+            ))
 
         # ----------------------------------------------------------------------
         # Case C: Casual greeting or small talk -> brief, natural, conversational response
@@ -608,18 +639,18 @@ class RAGService:
                         "role": "user",
                         "content": f"{q_clean}\n\n(Respond warmly, naturally, and briefly in 1-2 sentences. Offer to help with IEEE topics.)"
                     })
-                    raw_reply = self._call_llm(messages, api_key, max_tokens=150, temperature=0.7)
-                    return ChatResponse(
+                    raw_reply = self._call_llm(messages, api_key, max_tokens=70, temperature=0.6)
+                    return _finish(ChatResponse(
                         answer=self._post_process_answer(raw_reply),
                         sources=[],
                         retrieved_chunks_count=0,
                         model_used="IEEE Assistant",
                         confidence_note=None
-                    )
+                    ))
                 except Exception as e:
                     logger.warning(f"Casual LLM call failed: {e}")
 
-            return self._synthesize_offline_fallback(q_clean, intent, [], history)
+            return _finish(self._synthesize_offline_fallback(q_clean, intent, [], history))
 
         # ----------------------------------------------------------------------
         # Case D: Acknowledgement -> natural, concise receipt maintaining conversation flow
@@ -636,18 +667,18 @@ class RAGService:
                         "role": "user",
                         "content": f"{q_clean}\n\n(Acknowledge concisely in 1-2 friendly sentences. Do not dump technical overviews.)"
                     })
-                    raw_reply = self._call_llm(messages, api_key, max_tokens=100, temperature=0.5)
-                    return ChatResponse(
+                    raw_reply = self._call_llm(messages, api_key, max_tokens=50, temperature=0.5)
+                    return _finish(ChatResponse(
                         answer=self._post_process_answer(raw_reply),
                         sources=[],
                         retrieved_chunks_count=0,
                         model_used="IEEE Assistant",
                         confidence_note=None
-                    )
+                    ))
                 except Exception as e:
                     logger.warning(f"Acknowledgement LLM call failed: {e}")
 
-            return self._synthesize_offline_fallback(q_clean, intent, [], history)
+            return _finish(self._synthesize_offline_fallback(q_clean, intent, [], history))
 
         # ----------------------------------------------------------------------
         # Case E: Bot capabilities & identity
@@ -662,18 +693,18 @@ class RAGService:
                             "content": f"{q_clean}\n\n(Briefly summarize what you can help with regarding IEEE membership, student branches, publications, and standards in 2-3 direct sentences.)"
                         }
                     ]
-                    raw_reply = self._call_llm(messages, api_key, max_tokens=180, temperature=0.3)
-                    return ChatResponse(
+                    raw_reply = self._call_llm(messages, api_key, max_tokens=120, temperature=0.3)
+                    return _finish(ChatResponse(
                         answer=self._post_process_answer(raw_reply),
                         sources=[],
                         retrieved_chunks_count=0,
                         model_used="IEEE Assistant",
                         confidence_note=None
-                    )
+                    ))
                 except Exception as e:
                     logger.warning(f"Bot capabilities LLM call failed: {e}")
 
-            return self._synthesize_offline_fallback(q_clean, intent, [], history)
+            return _finish(self._synthesize_offline_fallback(q_clean, intent, [], history))
 
         # ----------------------------------------------------------------------
         # Case F: Substantive IEEE Queries & Follow-ups -> Grounded RAG Retrieval
@@ -710,7 +741,7 @@ class RAGService:
 
         # If API key is not configured, use transparent offline fallback
         if not api_key:
-            return self._synthesize_offline_fallback(q_clean, intent, sources_list, history)
+            return _finish(self._synthesize_offline_fallback(q_clean, intent, sources_list, history))
 
         # Build prompt with retrieved evidence and conversation history
         context_str = self._build_context_string(retrieved_raw)
@@ -746,17 +777,17 @@ class RAGService:
         messages.append({"role": "user", "content": user_prompt})
 
         try:
-            raw_content = self._call_llm(messages, api_key, max_tokens=512, temperature=0.2)
+            raw_content = self._call_llm(messages, api_key, max_tokens=220, temperature=0.2)
             clean_text = self._post_process_answer(raw_content)
 
-            return ChatResponse(
+            return _finish(ChatResponse(
                 answer=clean_text,
                 sources=sources_list,
                 retrieved_chunks_count=len(sources_list),
                 model_used="IEEE Assistant",
                 confidence_note="Answer grounded in verified IEEE knowledge." if sources_list else None
-            )
+            ))
 
         except Exception as e:
             logger.error(f"NVIDIA Nemotron generation error: {str(e)}")
-            return self._synthesize_offline_fallback(q_clean, intent, sources_list, history)
+            return _finish(self._synthesize_offline_fallback(q_clean, intent, sources_list, history))

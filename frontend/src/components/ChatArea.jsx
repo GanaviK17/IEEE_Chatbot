@@ -10,6 +10,8 @@ export default function ChatArea({
   voiceHook
 }) {
   const [inputText, setInputText] = useState('');
+  const baseInputTextRef = useRef('');
+  const lastSpokenIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -37,20 +39,35 @@ export default function ChatArea({
     scrollToBottom();
   }, [messages, isLoading]);
 
-  // Update input text with speech transcript in real time
+  // Append incoming speech transcript to previously existing text
   useEffect(() => {
-    if (transcript) {
-      setInputText(transcript);
+    if (isListening && transcript) {
+      const base = baseInputTextRef.current;
+      const combined = base ? `${base} ${transcript.trimStart()}` : transcript;
+      setInputText(combined);
     }
-  }, [transcript]);
+  }, [transcript, isListening]);
 
-  // Auto-speak the latest assistant message if auto-speak is enabled
+  // When speech session concludes, commit current text as new base
   useEffect(() => {
-    if (isAutoSpeakEnabled && messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg.sender === 'bot' && !lastMsg.isError && lastMsg.text) {
-        speak(lastMsg.text, lastMsg.id);
-      }
+    if (!isListening && transcript) {
+      baseInputTextRef.current = inputText.trim();
+    }
+  }, [isListening, transcript, inputText]);
+
+  // Auto-speak the latest assistant message reliably across consecutive questions
+  useEffect(() => {
+    if (!isAutoSpeakEnabled || messages.length === 0) return;
+
+    const lastMsg = messages[messages.length - 1];
+    if (
+      lastMsg.sender === 'bot' &&
+      !lastMsg.isError &&
+      lastMsg.text &&
+      lastMsg.id !== lastSpokenIdRef.current
+    ) {
+      lastSpokenIdRef.current = lastMsg.id;
+      speak(lastMsg.text, lastMsg.id);
     }
   }, [messages, isAutoSpeakEnabled, speak]);
 
@@ -66,6 +83,7 @@ export default function ChatArea({
     onSendMessage(trimmed);
     setInputText('');
     setTranscript('');
+    baseInputTextRef.current = '';
   };
 
   const handleKeyDown = (e) => {
@@ -83,7 +101,10 @@ export default function ChatArea({
   const toggleListening = () => {
     if (isListening) {
       stopListening();
+      baseInputTextRef.current = inputText.trim();
     } else {
+      // Capture existing text so newly spoken words are appended
+      baseInputTextRef.current = inputText.trim();
       startListening();
     }
   };

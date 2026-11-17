@@ -21,7 +21,7 @@ export default function Header({ voiceHook }) {
       <div className="header-actions">
         {/* Voice Auto-Speak Toggle */}
         <button
-          className={`voice-toggle-btn ${isAutoSpeakEnabled ? 'active' : ''}`}
+          className={`voice-toggle-btn ${isAutoSpeakEnabled ? 'active' : ''} ${isSpeaking ? 'speaking' : ''}`}
           onClick={() => {
             const next = !isAutoSpeakEnabled;
             setIsAutoSpeakEnabled(next);
@@ -29,11 +29,13 @@ export default function Header({ voiceHook }) {
               stopSpeaking();
             }
           }}
-          title={isAutoSpeakEnabled ? "Mute automatic speech" : "Read answers aloud"}
+          title={isAutoSpeakEnabled ? "Mute automatic speech" : "Read answers aloud automatically"}
           aria-label="Toggle Voice Output"
         >
           {isAutoSpeakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          <span className="voice-btn-label">{isAutoSpeakEnabled ? "Voice On" : "Voice Off"}</span>
+          <span className="voice-btn-label">
+            {isAutoSpeakEnabled ? (isSpeaking ? "Speaking..." : "Speaker On") : "Speaker Off"}
+          </span>
         </button>
       </div>
     </header>

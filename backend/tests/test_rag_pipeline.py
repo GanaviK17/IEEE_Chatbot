@@ -6,13 +6,14 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
+import pytest
 from app.document_processor import extract_and_chunk_pdf, clean_text
 from app.vector_store import VectorStoreManager
 from app.rag_service import RAGService
 from app.config import SAMPLE_DOCS_DIR
 
-def test_pdf_extraction_and_chunking():
-    print("--> Testing PDF extraction and chunking...")
+@pytest.fixture
+def sample_pdf_data():
     sample_pdf = os.path.join(SAMPLE_DOCS_DIR, "ieee_official_guide.pdf")
     assert os.path.exists(sample_pdf), f"Sample PDF missing at {sample_pdf}"
 
@@ -24,7 +25,11 @@ def test_pdf_extraction_and_chunking():
         filename="ieee_official_guide.pdf",
         source_url="https://www.ieee.org"
     )
+    return doc_id, chunks, total_pages, len(content)
 
+def test_pdf_extraction_and_chunking(sample_pdf_data):
+    print("--> Testing PDF extraction and chunking...")
+    doc_id, chunks, total_pages, file_size = sample_pdf_data
     print(f"Extracted {total_pages} pages, generated {len(chunks)} chunks, doc_id: {doc_id}")
     assert total_pages == 4, f"Expected 4 pages, got {total_pages}"
     assert len(chunks) >= 4, f"Expected at least 4 chunks, got {len(chunks)}"
@@ -36,9 +41,9 @@ def test_pdf_extraction_and_chunking():
     assert first_chunk["metadata"]["page_number"] == 1
     assert first_chunk["metadata"]["document_name"] == "ieee_official_guide.pdf"
     print("SUCCESS: PDF extraction and chunking verified.")
-    return doc_id, chunks, total_pages, len(content)
 
-def test_vector_store_indexing_and_search(doc_id, chunks, total_pages, file_size):
+def test_vector_store_indexing_and_search(sample_pdf_data):
+    doc_id, chunks, total_pages, file_size = sample_pdf_data
     print("--> Testing ChromaDB vector indexing and retrieval...")
     vstore = VectorStoreManager.get_instance()
     
