@@ -88,6 +88,10 @@ class RAGService:
         if any(phrase in q_lower for phrase in ["full form", "stands for", "meaning of ieee", "expand ieee", "what is ieee"]):
             return f"{q} Institute of Electrical and Electronics Engineers full form acronym meaning overview"
 
+        # Websites, URLs, portals, directories
+        if any(term in q_lower for term in ["url", "urls", "website", "websites", "link", "links", "portal", "portals"]):
+            return f"{q} IEEE official portals websites directories links Xplore Standards Students Join Computer Society"
+
         # Canada / Region 7 / Canadian branches
         if any(phrase in q_lower for phrase in ["canada", "canadian", "region 7", "r7"]):
             return f"{q} IEEE Canada Region 7 student branches Toronto Vancouver McGill Waterloo Alberta McMaster"
@@ -133,6 +137,9 @@ class RAGService:
 
         clean = text.strip()
 
+        # 0. Clean bold wrapping around bare URLs: **https://ieeexplore.ieee.org/** -> https://ieeexplore.ieee.org/
+        clean = re.sub(r'\*\*(https?://[^\s*]+)\*\*', r'\1', clean)
+
         # 1. Eliminate any meta-sentences mentioning "reference information", "provided context", etc.
         meta_sentence_pattern = (
             r'(?i)\b(i cannot [^.\n]*because\s+)?(the\s+)?(provided\s+)?(reference(\s+information)?|context|documents?)\s*'
@@ -150,35 +157,162 @@ class RAGService:
         )
         clean = re.sub(leading_meta_pattern, '', clean, flags=re.IGNORECASE).strip()
 
-        # 2. Fix inline asterisks running together: e.g. "Text. * Item 1: ... * Item 2:" -> split to newlines
-        clean = re.sub(r'(?<!\n)\s+[\*•]\s+', '\n\n• ', clean)
-        # Handle lines that start with '* ' or '- ' -> normalize to '• '
+        # 2. Fix inline asterisks or bullets running together on a single line:
+        # e.g., "society. * **Magazines**:" or "including: * **Journals" -> split cleanly to newlines
+        clean = re.sub(r'([.:?!])\s*[\*•\-]\s+', r'\1\n\n• ', clean)
+        clean = re.sub(r'(?<!\n)\s+[\*•\-]\s+', '\n\n• ', clean)
         clean = re.sub(r'(?m)^[\*\-]\s+', '• ', clean)
 
-        # 3. Strip awkward trailing bot sentences like "You can find more information at https://..."
-        # or "You can search https://... by topic..."
+        # 3. Strip awkward trailing bot sentences like "You can find/search more information at https://..."
         raw_url_filler_pattern = (
-            r'(?im)\n*(you can (find|search|visit|explore|access) (more )?(information|details)? (at|on) https?://[^\s)]+[\w/.]*(\s*by topic[^\n.]*)?\.*)'
+            r'(?im)\n*(you can (find|search|visit|explore|access) (more )?(information|details)? (at|on|via)?\s*(\*\*)?https?://[^\s)]+[\w/.]*(\*\*)?(\s*by topic[^\n.]*)?\.*)'
         )
         clean = re.sub(raw_url_filler_pattern, '', clean).strip()
 
         # 4. Convert remaining bare URLs into clean markdown links if not already markdown
         def replace_bare_url(match):
-            url = match.group(0)
-            if "ieeexplore" in url:
+            url = match.group(0).rstrip('.,;:')
+            url_lower = url.lower()
+            if "ieeexplore" in url_lower:
                 return f"[IEEE Xplore]({url})"
-            elif "nisb.in" in url:
+            elif "nisb.in" in url_lower:
                 return f"[NISB Portal]({url})"
-            elif "ieee.org" in url:
-                return f"[IEEE.org]({url})"
-            elif "ieee.ca" in url:
+            elif "computer.org" in url_lower:
+                return f"[IEEE Computer Society]({url})"
+            elif "comsoc.org" in url_lower:
+                return f"[IEEE Communications Society]({url})"
+            elif "ieee-pes.org" in url_lower:
+                return f"[IEEE Power & Energy Society]({url})"
+            elif "ieee-ras.org" in url_lower:
+                return f"[IEEE Robotics and Automation Society]({url})"
+            elif "standards.ieee.org" in url_lower:
+                return f"[IEEE Standards Association]({url})"
+            elif "students.ieee.org" in url_lower:
+                return f"[IEEE Students Portal]({url})"
+            elif "ieeextreme.org" in url_lower:
+                return f"[IEEEXtreme Competition]({url})"
+            elif "wie.ieee.org" in url_lower:
+                return f"[IEEE Women in Engineering]({url})"
+            elif "yp.ieee.org" in url_lower:
+                return f"[IEEE Young Professionals]({url})"
+            elif "sight.ieee.org" in url_lower:
+                return f"[IEEE SIGHT]({url})"
+            elif "spectrum.ieee.org" in url_lower:
+                return f"[IEEE Spectrum]({url})"
+            elif "authorcenter.ieee.org" in url_lower:
+                return f"[IEEE Author Center]({url})"
+            elif "ieee-dataport.org" in url_lower:
+                return f"[IEEE DataPort]({url})"
+            elif "jobs.ieee.org" in url_lower:
+                return f"[IEEE Job Site]({url})"
+            elif "iln.ieee.org" in url_lower:
+                return f"[IEEE Learning Network]({url})"
+            elif "tryengineering.org" in url_lower:
+                return f"[IEEE TryEngineering]({url})"
+            elif "vtools.ieee.org" in url_lower:
+                return f"[IEEE vTools]({url})"
+            elif "ieee-collabratec.ieee.org" in url_lower:
+                return f"[IEEE Collabratec]({url})"
+            elif "ieeefoundation.org" in url_lower:
+                return f"[IEEE Foundation]({url})"
+            elif "ethw.org" in url_lower:
+                return f"[IEEE History Center (ETHW)]({url})"
+            elif "ieeeusa.org" in url_lower:
+                return f"[IEEE-USA]({url})"
+            elif "ieee.ca" in url_lower:
                 return f"[IEEE Canada]({url})"
+            elif "ieeer10.org" in url_lower:
+                return f"[IEEE Region 10]({url})"
+            elif "ieeer8.org" in url_lower:
+                return f"[IEEE Region 8]({url})"
+            elif "ieeeindiacouncil.org" in url_lower:
+                return f"[IEEE India Council]({url})"
+            elif "ieeebangalore.org" in url_lower:
+                return f"[IEEE Bangalore Section]({url})"
+            elif "mysore.ieeebangalore.org" in url_lower:
+                return f"[IEEE Mysore Subsection]({url})"
+            elif "branch-finder" in url_lower:
+                return f"[IEEE Student Branch Finder]({url})"
+            elif "join" in url_lower:
+                return f"[IEEE Membership Portal]({url})"
+            elif "ieee.org" in url_lower:
+                return f"[IEEE.org]({url})"
             return f"[{url}]({url})"
 
         # Only replace URLs that are NOT already part of a markdown link [text](url)
         clean = re.sub(r'(?<![\[\(])https?://[^\s)\]]+', replace_bare_url, clean)
         # Collapse any nested markdown links like [[Text](url)](url) -> [Text](url)
         clean = re.sub(r'\[+\[([^\]]+)\]\([^\)]+\)\]+\((https?://[^\s)]+)\)', r'[\1](\2)', clean)
+
+        # 4b. If any markdown link has a raw URL as its label [https://...](https://...), replace the label with a clean name
+        def format_md_link_label(match):
+            label = match.group(1).strip()
+            url = match.group(2).strip()
+            if label.startswith("http://") or label.startswith("https://"):
+                url_lower = url.lower()
+                if "ieeextreme" in url_lower:
+                    return f"[IEEEXtreme Competition]({url})"
+                elif "ieeexplore" in url_lower:
+                    return f"[IEEE Xplore]({url})"
+                elif "competitions" in url_lower:
+                    return f"[IEEE Student Competitions]({url})"
+                elif "students.ieee" in url_lower:
+                    return f"[IEEE Students Portal]({url})"
+                elif "branch-finder" in url_lower:
+                    return f"[IEEE Student Branch Finder]({url})"
+                elif "nisb.in" in url_lower:
+                    return f"[NISB Portal]({url})"
+                elif "computer.org" in url_lower:
+                    return f"[IEEE Computer Society]({url})"
+                elif "comsoc.org" in url_lower:
+                    return f"[IEEE Communications Society]({url})"
+                elif "ieee-pes.org" in url_lower:
+                    return f"[IEEE Power & Energy Society]({url})"
+                elif "ieee-ras.org" in url_lower:
+                    return f"[IEEE Robotics and Automation Society]({url})"
+                elif "standards.ieee.org" in url_lower:
+                    return f"[IEEE Standards Association]({url})"
+                elif "wie.ieee.org" in url_lower:
+                    return f"[IEEE Women in Engineering]({url})"
+                elif "yp.ieee.org" in url_lower:
+                    return f"[IEEE Young Professionals]({url})"
+                elif "sight.ieee.org" in url_lower:
+                    return f"[IEEE SIGHT]({url})"
+                elif "authorcenter" in url_lower:
+                    return f"[IEEE Author Center]({url})"
+                elif "dataport" in url_lower:
+                    return f"[IEEE DataPort]({url})"
+                elif "jobs.ieee" in url_lower:
+                    return f"[IEEE Job Site]({url})"
+                elif "iln.ieee" in url_lower:
+                    return f"[IEEE Learning Network]({url})"
+                elif "tryengineering" in url_lower:
+                    return f"[IEEE TryEngineering]({url})"
+                elif "vtools.ieee" in url_lower:
+                    return f"[IEEE vTools]({url})"
+                elif "collabratec" in url_lower:
+                    return f"[IEEE Collabratec]({url})"
+                elif "join" in url_lower:
+                    return f"[IEEE Membership Portal]({url})"
+                elif "ieeeusa.org" in url_lower:
+                    return f"[IEEE-USA]({url})"
+                elif "ieee.ca" in url_lower:
+                    return f"[IEEE Canada]({url})"
+                elif "ieeer10.org" in url_lower:
+                    return f"[IEEE Region 10]({url})"
+                elif "ieeer8.org" in url_lower:
+                    return f"[IEEE Region 8]({url})"
+                elif "ieeeindiacouncil.org" in url_lower:
+                    return f"[IEEE India Council]({url})"
+                elif "ieeebangalore.org" in url_lower:
+                    return f"[IEEE Bangalore Section]({url})"
+                elif "mysore.ieeebangalore.org" in url_lower:
+                    return f"[IEEE Mysore Subsection]({url})"
+                elif "ieee.org" in url_lower:
+                    return f"[IEEE.org]({url})"
+            return f"[{label}]({url})"
+
+        clean = re.sub(r'\[(https?://[^\s\]]+)\]\((https?://[^\s\)]+)\)', format_md_link_label, clean)
 
         # 5. Fix doubled periods '..' -> '.'
         clean = re.sub(r'\.{2,}', '.', clean)

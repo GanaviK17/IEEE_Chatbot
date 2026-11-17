@@ -17,43 +17,436 @@
     ]
   },
   {
-    "title": "NISB - NIE IEEE Student Branch Official Portal",
-    "url": "https://nisb.in/",
-    "short_description": "Official portal of the NIE IEEE Student Branch (NISB) at The National Institute of Engineering, Mysuru, Karnataka, India. Established in 1999 under the IEEE Bangalore Section and IEEE Mysore Subsection, organizing Adroit, Ankura, WIE events, and technical workshops.",
+    "title": "IEEE Membership Portal (Join & Renew)",
+    "url": "https://www.ieee.org/membership/join/index.html",
+    "short_description": "Official IEEE portal for creating membership accounts, joining IEEE as a professional or student member, selecting technical societies, and renewing annual memberships.",
     "topic_keywords": [
-      "nisb",
-      "nie ieee",
-      "nie ieee student branch",
-      "national institute of engineering",
-      "adroit",
+      "join ieee",
+      "membership application",
+      "renew membership",
+      "account login",
+      "student membership join",
+      "membership fees",
+      "sign up",
+      "how to join"
+    ]
+  },
+  {
+    "title": "IEEE Student Branch Finder",
+    "url": "https://www.ieee.org/membership/students/branch-finder.html",
+    "short_description": "Official geographic search tool to locate IEEE Student Branches, Student Branch Chapters, and Affinity Groups across universities and colleges in all 10 IEEE regions worldwide.",
+    "topic_keywords": [
+      "student branch finder",
+      "find branch",
+      "branches in canada",
+      "branches in india",
+      "branches in usa",
+      "locate student branch",
+      "university branches"
+    ]
+  },
+  {
+    "title": "IEEE Students Official Portal",
+    "url": "https://students.ieee.org/",
+    "short_description": "The central hub for all IEEE student members, offering resources on forming a student branch, branch officer tools, leadership training, student contests, and graduation transitions.",
+    "topic_keywords": [
+      "ieee students",
+      "student portal",
+      "student membership benefits",
+      "student activities committee",
+      "sac",
+      "branch leadership"
+    ]
+  },
+  {
+    "title": "IEEEXtreme Programming Competition",
+    "url": "https://ieeextreme.org/",
+    "short_description": "IEEEXtreme is a global 24-hour virtual competitive programming challenge where teams of IEEE student members compete against thousands of teams worldwide under proctor supervision.",
+    "topic_keywords": [
+      "ieeextreme",
+      "programming competition",
+      "hackathon",
+      "coding challenge",
+      "student competitions",
+      "24 hour contest"
+    ]
+  },
+  {
+    "title": "IEEE Student Scholarships, Grants & Fellowships",
+    "url": "https://www.ieee.org/membership/students/scholarships-grants-fellowships.html",
+    "short_description": "Comprehensive portal for IEEE student awards, including the Richard E. Merwin Student Scholarship, Charles LeGeyt Fortescue Graduate Scholarship, and conference travel grants.",
+    "topic_keywords": [
+      "scholarships",
+      "merwin scholarship",
+      "fortescue scholarship",
+      "student grants",
+      "travel grants",
+      "fellowships",
+      "awards"
+    ]
+  },
+  {
+    "title": "IEEE Student Branch Virtual Resource Center (VRC)",
+    "url": "https://vrc.ieee.org/",
+    "short_description": "Resource kit for IEEE Student Branch officers, containing constitution templates, branch reporting guidelines, funding opportunities, and marketing collateral.",
+    "topic_keywords": [
+      "vrc",
+      "virtual resource center",
+      "branch officer toolkit",
+      "student branch constitution",
+      "branch funding"
+    ]
+  },
+  {
+    "title": "IEEE Women in Engineering (WIE)",
+    "url": "https://wie.ieee.org/",
+    "short_description": "Global network of IEEE members dedicated to promoting women engineers and scientists, inspiring girls around the world to follow academic interests in STEM fields.",
+    "topic_keywords": [
+      "wie",
+      "women in engineering",
+      "wie affinity group",
+      "women in stem",
+      "wie summit",
       "ankura",
-      "mysuru student branch",
-      "mysore student branch"
+      "female engineers"
     ]
   },
   {
-    "title": "IEEE Bangalore Section",
-    "url": "https://ieeebangalore.org/",
-    "short_description": "One of the premier and most active IEEE Sections in Region 10 (Asia-Pacific), founded in 1976. Oversees Student Branches, Subsections (Mysore, Mangalore, North Karnataka), and technical society chapters across Karnataka.",
+    "title": "IEEE Young Professionals (YP)",
+    "url": "https://yp.ieee.org/",
+    "short_description": "International community dedicated to helping young professionals and recent graduates transition smoothly from academia into successful engineering careers.",
     "topic_keywords": [
-      "bangalore section",
-      "ieee bangalore",
-      "karnataka section",
-      "mysore subsection",
-      "mangalore subsection",
-      "north karnataka subsection"
+      "young professionals",
+      "yp",
+      "early career",
+      "graduates",
+      "yp affinity group",
+      "mentorship"
     ]
   },
   {
-    "title": "IEEE Region 10 (Asia-Pacific)",
-    "url": "https://www.ieeer10.org/",
-    "short_description": "IEEE Region 10 (R10) covers the Asia-Pacific area, spanning India, China, Japan, Australia, New Zealand, Singapore, and Southeast Asia, serving hundreds of thousands of members and student branches.",
+    "title": "IEEE SIGHT (Special Interest Group on Humanitarian Technology)",
+    "url": "https://sight.ieee.org/",
+    "short_description": "Global network of IEEE volunteers partnering with underserved local communities to leverage technology for sustainable development and humanitarian relief.",
     "topic_keywords": [
-      "region 10",
-      "r10",
-      "asia pacific",
-      "ieee r10",
-      "india council"
+      "sight",
+      "humanitarian technology",
+      "sustainable development",
+      "sight group",
+      "community service",
+      "social impact"
+    ]
+  },
+  {
+    "title": "IEEE Standards Association (IEEE-SA)",
+    "url": "https://standards.ieee.org/",
+    "short_description": "The globally recognized standards-setting body of IEEE, responsible for establishing market-driven technical standards such as IEEE 802.11 (Wi-Fi) and IEEE 802.3 (Ethernet).",
+    "topic_keywords": [
+      "standards",
+      "ieee standards",
+      "802.11",
+      "802.3",
+      "wi-fi",
+      "wifi",
+      "ethernet",
+      "ieee-sa",
+      "standardization"
+    ]
+  },
+  {
+    "title": "IEEE Computer Society",
+    "url": "https://www.computer.org/",
+    "short_description": "The premier professional organization for computer scientists and software engineers, publisher of Computer magazine and IEEE TPAMI, and organizer of flagship conferences.",
+    "topic_keywords": [
+      "computer society",
+      "ieee cs",
+      "software engineering",
+      "computer science",
+      "tpami",
+      "merwin",
+      "computing"
+    ]
+  },
+  {
+    "title": "IEEE Communications Society (ComSoc)",
+    "url": "https://www.comsoc.org/",
+    "short_description": "World-leading community for professionals in communications and networking, publishing IEEE JSAC and IEEE Communications Magazine, and hosting IEEE GLOBECOM and ICC.",
+    "topic_keywords": [
+      "comsoc",
+      "communications society",
+      "telecommunications",
+      "5g",
+      "6g",
+      "networking",
+      "globecom",
+      "icc",
+      "jsac"
+    ]
+  },
+  {
+    "title": "IEEE Power & Energy Society (PES)",
+    "url": "https://www.ieee-pes.org/",
+    "short_description": "Leading global society for electric power, smart grids, renewable energy, and power systems engineering, publishing IEEE Transactions on Power Systems.",
+    "topic_keywords": [
+      "pes",
+      "power and energy society",
+      "smart grid",
+      "renewable energy",
+      "power engineering",
+      "power systems",
+      "pes scholarship"
+    ]
+  },
+  {
+    "title": "IEEE Robotics and Automation Society (RAS)",
+    "url": "https://www.ieee-ras.org/",
+    "short_description": "The global hub for robotics, autonomous vehicles, and industrial automation research, organizer of ICRA and IROS conferences and publisher of IEEE Transactions on Robotics (T-RO).",
+    "topic_keywords": [
+      "ras",
+      "robotics and automation",
+      "robotics society",
+      "icra",
+      "iros",
+      "autonomous systems",
+      "automation"
+    ]
+  },
+  {
+    "title": "IEEE Signal Processing Society (SPS)",
+    "url": "https://signalprocessingsociety.org/",
+    "short_description": "IEEE's oldest technical society, specializing in the theory and application of filtering, coding, transmitting, estimating, and detecting signals (audio, video, speech, image).",
+    "topic_keywords": [
+      "signal processing",
+      "sps",
+      "icassp",
+      "audio processing",
+      "image processing",
+      "video compression",
+      "dsp"
+    ]
+  },
+  {
+    "title": "IEEE Computational Intelligence Society (CIS)",
+    "url": "https://cis.ieee.org/",
+    "short_description": "Premier society focusing on neural networks, fuzzy systems, evolutionary computation, and machine learning, publisher of IEEE Transactions on Neural Networks and Learning Systems (TNNLS).",
+    "topic_keywords": [
+      "computational intelligence",
+      "cis",
+      "neural networks",
+      "deep learning",
+      "fuzzy systems",
+      "tnnls",
+      "ai"
+    ]
+  },
+  {
+    "title": "IEEE Electron Devices Society (EDS)",
+    "url": "https://eds.ieee.org/",
+    "short_description": "Society advancing the development of electronic, photonic, and semiconductor devices, including microelectronics, quantum electronics, and transistors (IEDM conference sponsor).",
+    "topic_keywords": [
+      "electron devices",
+      "eds",
+      "semiconductors",
+      "microelectronics",
+      "iedm",
+      "transistors",
+      "vlsi"
+    ]
+  },
+  {
+    "title": "IEEE Solid-State Circuits Society (SSCS)",
+    "url": "https://sscs.ieee.org/",
+    "short_description": "Dedicated to integrated circuits (IC) design, sponsoring the prestigious International Solid-State Circuits Conference (ISSCC) and publishing the IEEE Journal of Solid-State Circuits (JSSC).",
+    "topic_keywords": [
+      "solid state circuits",
+      "sscs",
+      "isscc",
+      "jssc",
+      "integrated circuits",
+      "chip design",
+      "vlsi circuits"
+    ]
+  },
+  {
+    "title": "IEEE Engineering in Medicine and Biology Society (EMBS)",
+    "url": "https://www.embs.org/",
+    "short_description": "The world's largest international society of biomedical engineers, developing healthcare technology, medical devices, neuroengineering, and bioinformatics.",
+    "topic_keywords": [
+      "embs",
+      "biomedical engineering",
+      "medicine and biology",
+      "healthcare technology",
+      "medical devices",
+      "bioinformatics"
+    ]
+  },
+  {
+    "title": "IEEE Photonics Society",
+    "url": "https://photonsworld.org/",
+    "short_description": "Dedicated to the science and technology of generating, controlling, and detecting photons, spanning lasers, optical communications, biophotonics, and quantum optics.",
+    "topic_keywords": [
+      "photonics",
+      "optics",
+      "lasers",
+      "optical communication",
+      "quantum photonics"
+    ]
+  },
+  {
+    "title": "IEEE Aerospace and Electronic Systems Society (AESS)",
+    "url": "https://ieee-aess.org/",
+    "short_description": "Focuses on radar, avionics, space systems, navigation, and defense electronics across air, sea, land, and space environments.",
+    "topic_keywords": [
+      "aess",
+      "aerospace",
+      "radar",
+      "avionics",
+      "navigation",
+      "satellite systems",
+      "space engineering"
+    ]
+  },
+  {
+    "title": "IEEE Microwave Theory and Technology Society (MTT-S)",
+    "url": "https://mtt.org/",
+    "short_description": "Dedicated to RF, microwave, millimeter-wave, and terahertz technologies, sponsoring the annual International Microwave Symposium (IMS).",
+    "topic_keywords": [
+      "mtt-s",
+      "microwave",
+      "rf engineering",
+      "ims",
+      "millimeter wave",
+      "terahertz"
+    ]
+  },
+  {
+    "title": "IEEE Author Center",
+    "url": "https://authorcenter.ieee.org/",
+    "short_description": "Official authoring portal with guidelines, LaTeX and Word manuscript templates, submission portals, and peer-review policies for publishing papers in IEEE journals and conferences.",
+    "topic_keywords": [
+      "author center",
+      "submit paper",
+      "ieee latex template",
+      "paper template",
+      "manuscript formatting",
+      "author guidelines",
+      "publishing in ieee"
+    ]
+  },
+  {
+    "title": "IEEE Access (Open Access Journal)",
+    "url": "https://ieeeaccess.ieee.org/",
+    "short_description": "Multidisciplinary, peer-reviewed, open-access journal published by IEEE covering all technical domains with rapid, high-quality peer review.",
+    "topic_keywords": [
+      "ieee access",
+      "open access",
+      "open science",
+      "gold open access",
+      "multidisciplinary journal"
+    ]
+  },
+  {
+    "title": "IEEE Spectrum Magazine",
+    "url": "https://spectrum.ieee.org/",
+    "short_description": "The flagship magazine of IEEE, delivering in-depth reporting, analysis, and breaking news on global technology trends, engineering innovations, and science breakthroughs.",
+    "topic_keywords": [
+      "ieee spectrum",
+      "spectrum magazine",
+      "technology news",
+      "engineering news",
+      "flagship magazine"
+    ]
+  },
+  {
+    "title": "IEEE DataPort",
+    "url": "https://ieee-dataport.org/",
+    "short_description": "Recognized global research data repository enabling researchers and data scientists to store, share, access, and cite datasets up to 2TB per dataset with persistent DOIs.",
+    "topic_keywords": [
+      "dataport",
+      "ieee dataport",
+      "datasets",
+      "research data",
+      "open data",
+      "cite datasets"
+    ]
+  },
+  {
+    "title": "IEEE Learning Network (ILN)",
+    "url": "https://iln.ieee.org/",
+    "short_description": "Premier online learning platform providing continuing education courses, professional development hours (PDHs), and CEUs across AI, 5G, cybersecurity, and power engineering.",
+    "topic_keywords": [
+      "iln",
+      "learning network",
+      "continuing education",
+      "professional development hours",
+      "pdh",
+      "ceu",
+      "courses"
+    ]
+  },
+  {
+    "title": "IEEE Job Site & Career Center",
+    "url": "https://jobs.ieee.org/",
+    "short_description": "Global career portal connecting engineering professionals and students with technology employers, technical internships, and engineering vacancies worldwide.",
+    "topic_keywords": [
+      "ieee jobs",
+      "job site",
+      "engineering jobs",
+      "career center",
+      "internships",
+      "tech careers"
+    ]
+  },
+  {
+    "title": "IEEE ResumeLab",
+    "url": "https://www.ieee.org/membership/resumelab.html",
+    "short_description": "An exclusive career-building tool for IEEE members offering professional resume builders, portfolio templates, and mock interview practice.",
+    "topic_keywords": [
+      "resumelab",
+      "resume builder",
+      "career tools",
+      "mock interviews",
+      "portfolio",
+      "job search"
+    ]
+  },
+  {
+    "title": "IEEE TryEngineering (STEM Portal)",
+    "url": "https://tryengineering.org/",
+    "short_description": "IEEE's pre-university education initiative providing STEM lesson plans, engineering games, university degree program searches, and summer camp directories for students and educators.",
+    "topic_keywords": [
+      "tryengineering",
+      "stem",
+      "pre-university",
+      "engineering lesson plans",
+      "k-12",
+      "school outreach"
+    ]
+  },
+  {
+    "title": "IEEE Foundation",
+    "url": "https://www.ieeefoundation.org/",
+    "short_description": "The philanthropic partner of IEEE, funding humanitarian projects, educational programs, and technological history initiatives that benefit communities around the world.",
+    "topic_keywords": [
+      "ieee foundation",
+      "philanthropy",
+      "donations",
+      "funding",
+      "grants",
+      "humanitarian funding"
+    ]
+  },
+  {
+    "title": "IEEE History Center (ETHW)",
+    "url": "https://ethw.org/",
+    "short_description": "The Engineering and Technology History Wiki (ETHW), preserved by the IEEE History Center, recording milestones, oral histories, and archives of engineering breakthroughs.",
+    "topic_keywords": [
+      "ethw",
+      "history center",
+      "ieee milestones",
+      "engineering history",
+      "oral histories",
+      "archives"
     ]
   },
   {
@@ -69,40 +462,9 @@
     ]
   },
   {
-    "title": "IEEE Standards Association (IEEE-SA)",
-    "url": "https://standards.ieee.org/",
-    "short_description": "The official consensus building organization that develops globally recognized market-driven IEEE standards including IEEE 802.3 (Ethernet) and IEEE 802.11 (Wi-Fi).",
-    "topic_keywords": [
-      "standards",
-      "ieee standards",
-      "802.3",
-      "802.11",
-      "ethernet",
-      "wifi",
-      "wi-fi",
-      "ieee-sa",
-      "standardization",
-      "specifications"
-    ]
-  },
-  {
-    "title": "IEEE Membership Portal (Join & Renew)",
-    "url": "https://www.ieee.org/membership/join/index.html",
-    "short_description": "Official IEEE portal for creating membership accounts, joining IEEE as a professional or student member, selecting technical societies, and renewing annual memberships.",
-    "topic_keywords": [
-      "join ieee",
-      "membership application",
-      "renew membership",
-      "account login",
-      "student membership join",
-      "membership fees",
-      "sign up"
-    ]
-  },
-  {
     "title": "IEEE Collabratec",
     "url": "https://ieee-collabratec.ieee.org/",
-    "short_description": "IEEE Collabratec is an integrated online community and collaboration platform that connects global technology and engineering professionals for networking, authoring, and sharing research.",
+    "short_description": "Integrated online community and collaboration platform that connects global technology and engineering professionals for networking, authoring, and sharing research.",
     "topic_keywords": [
       "collabratec",
       "professional network",
@@ -110,19 +472,6 @@
       "collaboration",
       "authoring",
       "networking"
-    ]
-  },
-  {
-    "title": "IEEE ResumeLab (Career Portal)",
-    "url": "https://www.ieee.org/membership/resumelab.html",
-    "short_description": "An exclusive career-building tool for IEEE members offering professional resume builders, portfolio templates, and mock interview practice.",
-    "topic_keywords": [
-      "resumelab",
-      "resume builder",
-      "career tools",
-      "mock interviews",
-      "portfolio",
-      "job search"
     ]
   },
   {
@@ -149,6 +498,111 @@
       "communications society",
       "power and energy",
       "chapters"
+    ]
+  },
+  {
+    "title": "IEEE-USA (United States Activities)",
+    "url": "https://ieeeusa.org/",
+    "short_description": "Organizational unit of IEEE that supports the career, public policy, and professional interests of IEEE members in the United States across Regions 1 through 6.",
+    "topic_keywords": [
+      "ieee-usa",
+      "ieee usa",
+      "united states",
+      "public policy",
+      "region 1-6",
+      "american members"
+    ]
+  },
+  {
+    "title": "IEEE Canada (Region 7)",
+    "url": "https://www.ieee.ca/",
+    "short_description": "Official organizational entity representing IEEE Region 7 (Canada), encompassing 20+ sections, 60+ student branches (such as U of T, UBC, McGill, Waterloo), conferences, and awards.",
+    "topic_keywords": [
+      "ieee canada",
+      "region 7",
+      "canadian branches",
+      "toronto section",
+      "vancouver section",
+      "montreal section",
+      "ccece"
+    ]
+  },
+  {
+    "title": "IEEE Region 8 (Europe, Middle East, Africa)",
+    "url": "https://ieeer8.org/",
+    "short_description": "IEEE Region 8 covers Europe, the Middle East, and Africa, organizing student and professional activities, IEEE MELECON, and EUROCON conferences across 50+ sections.",
+    "topic_keywords": [
+      "region 8",
+      "r8",
+      "europe",
+      "middle east",
+      "africa",
+      "uk and ireland section"
+    ]
+  },
+  {
+    "title": "IEEE Region 10 (Asia-Pacific)",
+    "url": "https://www.ieeer10.org/",
+    "short_description": "IEEE Region 10 (R10) covers the Asia-Pacific area, spanning India, China, Japan, Australia, New Zealand, Singapore, and Southeast Asia, serving hundreds of thousands of members and student branches.",
+    "topic_keywords": [
+      "region 10",
+      "r10",
+      "asia pacific",
+      "ieee r10",
+      "tencon",
+      "india council"
+    ]
+  },
+  {
+    "title": "IEEE India Council",
+    "url": "https://ieeeindiacouncil.org/",
+    "short_description": "Coordinating body of all 13 IEEE Sections in India (including Bangalore, Bombay, Delhi, Hyderabad, Madras, Kerala, etc.), organizing INDICON and fostering student branch networks.",
+    "topic_keywords": [
+      "india council",
+      "ieee india",
+      "indicon",
+      "sections in india",
+      "indian student branches"
+    ]
+  },
+  {
+    "title": "IEEE Bangalore Section",
+    "url": "https://ieeebangalore.org/",
+    "short_description": "One of the premier and most active IEEE Sections in Region 10 (Asia-Pacific), founded in 1976. Oversees Student Branches, Subsections (Mysore, Mangalore, North Karnataka), and technical society chapters across Karnataka.",
+    "topic_keywords": [
+      "bangalore section",
+      "ieee bangalore",
+      "karnataka section",
+      "mysore subsection",
+      "mangalore subsection",
+      "north karnataka subsection"
+    ]
+  },
+  {
+    "title": "IEEE Mysore Subsection",
+    "url": "https://mysore.ieeebangalore.org/",
+    "short_description": "Subsection established under the IEEE Bangalore Section to support engineering colleges, research centers, and active student branches like NISB across the Mysore region.",
+    "topic_keywords": [
+      "mysore subsection",
+      "ieee mysore",
+      "mysuru subsection",
+      "mysorecon",
+      "nie student branch"
+    ]
+  },
+  {
+    "title": "NISB - NIE IEEE Student Branch Official Portal",
+    "url": "https://nisb.in/",
+    "short_description": "Official portal of the NIE IEEE Student Branch (NISB) at The National Institute of Engineering, Mysuru, Karnataka, India. Established in 1999 under the IEEE Bangalore Section and IEEE Mysore Subsection, organizing Adroit, Ankura, WIE events, and technical workshops.",
+    "topic_keywords": [
+      "nisb",
+      "nie ieee",
+      "nie ieee student branch",
+      "national institute of engineering",
+      "adroit",
+      "ankura",
+      "mysuru student branch",
+      "mysore student branch"
     ]
   }
 ]

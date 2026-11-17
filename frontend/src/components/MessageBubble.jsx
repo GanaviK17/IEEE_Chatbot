@@ -51,7 +51,8 @@ export default function MessageBubble({
 
     // Normalize any stray inline asterisks or bullets that might be placed inline
     const normalized = text
-      .replace(/(?<!\n)\s+[\*•]\s+/g, '\n• ')
+      .replace(/([.?!])\s*[\*•\-]\s+/g, '$1\n• ')
+      .replace(/(?<!\n)\s+[\*•\-]\s+/g, '\n• ')
       .replace(/\r\n/g, '\n');
 
     const lines = normalized.split('\n');
@@ -102,29 +103,81 @@ export default function MessageBubble({
     const regex = /(\[.*?\]\(https?:\/\/[^\s)]+\)|\*\*.*?\*\*|`.*?`|https?:\/\/[^\s)\]]+)/g;
     const parts = str.split(regex);
 
+    const getCleanLinkLabel = (label, url) => {
+      let clean = (label || '').replace(/[\[\]]/g, '').trim();
+      if (!clean || clean.startsWith('http://') || clean.startsWith('https://')) {
+        const u = (url || '').toLowerCase();
+        if (u.includes('ieeextreme')) return 'IEEEXtreme Competition';
+        if (u.includes('ieeexplore')) return 'IEEE Xplore';
+        if (u.includes('students.ieee.org/competitions')) return 'IEEE Student Competitions';
+        if (u.includes('students.ieee')) return 'IEEE Students Portal';
+        if (u.includes('branch-finder')) return 'IEEE Student Branch Finder';
+        if (u.includes('nisb.in')) return 'NISB Portal';
+        if (u.includes('computer.org')) return 'IEEE Computer Society';
+        if (u.includes('comsoc.org')) return 'IEEE Communications Society';
+        if (u.includes('ieee-pes.org')) return 'IEEE Power & Energy Society';
+        if (u.includes('ieee-ras.org')) return 'IEEE Robotics and Automation Society';
+        if (u.includes('standards.ieee')) return 'IEEE Standards Association';
+        if (u.includes('join')) return 'IEEE Membership Portal';
+        if (u.includes('authorcenter')) return 'IEEE Author Center';
+        if (u.includes('ieee-dataport')) return 'IEEE DataPort';
+        if (u.includes('wie.ieee')) return 'IEEE Women in Engineering';
+        if (u.includes('yp.ieee')) return 'IEEE Young Professionals';
+        if (u.includes('sight.ieee')) return 'IEEE SIGHT';
+        if (u.includes('ieeeusa.org')) return 'IEEE-USA';
+        if (u.includes('ieee.ca')) return 'IEEE Canada';
+        if (u.includes('ieee.org')) return 'IEEE.org';
+        return url;
+      }
+      return clean;
+    };
+
     return parts.map((part, i) => {
       if (!part) return null;
 
       // Markdown link: [Title](https://...)
       const mdLinkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s)]+)\)$/);
       if (mdLinkMatch) {
-        const cleanTitle = mdLinkMatch[1].replace(/[\[\]]/g, '');
+        const linkUrl = mdLinkMatch[2];
+        const displayLabel = getCleanLinkLabel(mdLinkMatch[1], linkUrl);
         return (
           <a
             key={i}
-            href={mdLinkMatch[2]}
+            href={linkUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="msg-link"
           >
-            {cleanTitle}
+            {displayLabel}
           </a>
         );
       }
 
       // Bold: **text**
       if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-        return <strong key={i}>{part.slice(2, -2)}</strong>;
+        const inner = part.slice(2, -2);
+        if (inner.startsWith('http://') || inner.startsWith('https://')) {
+          return (
+            <strong key={i}>
+              <a href={inner} target="_blank" rel="noopener noreferrer" className="msg-link">
+                {getCleanLinkLabel('', inner)}
+              </a>
+            </strong>
+          );
+        }
+        const innerMd = inner.match(/^\[(.*?)\]\((https?:\/\/[^\s)]+)\)$/);
+        if (innerMd) {
+          const linkUrl = innerMd[2];
+          const displayLabel = getCleanLinkLabel(innerMd[1], linkUrl);
+          return (
+            <strong key={i}>
+              <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="msg-link">
+                {displayLabel}
+              </a>
+            </strong>
+          );
+        }
+        return <strong key={i}>{inner}</strong>;
       }
 
       // Inline code: `code`
@@ -142,7 +195,7 @@ export default function MessageBubble({
             rel="noopener noreferrer"
             className="msg-link"
           >
-            {part}
+            {getCleanLinkLabel('', part)}
           </a>
         );
       }
