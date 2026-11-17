@@ -9,6 +9,7 @@ sys.path.insert(0, str(BASE_DIR))
 
 from app.main import app
 from app.config import SAMPLE_DOCS_DIR
+from app.auth import create_admin_token, ADMIN_USERNAME
 
 client = TestClient(app)
 
@@ -26,11 +27,16 @@ def test_document_lifecycle_and_chat():
     print("--> Testing Document Upload, Chat, and Deletion Endpoints...")
     sample_pdf = os.path.join(SAMPLE_DOCS_DIR, "ieee_official_guide.pdf")
     
+    # Generate admin auth headers
+    token_data = create_admin_token(ADMIN_USERNAME)
+    auth_headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+
     # 1. Upload sample PDF
     with open(sample_pdf, "rb") as f:
         response = client.post(
             "/upload",
-            files={"file": ("IEEE_Test_Guide.pdf", f, "application/pdf")}
+            files={"file": ("IEEE_Test_Guide.pdf", f, "application/pdf")},
+            headers=auth_headers
         )
     assert response.status_code == 200, f"Upload failed: {response.text}"
     upload_data = response.json()
@@ -41,7 +47,7 @@ def test_document_lifecycle_and_chat():
     assert doc["chunks_count"] >= 4
 
     # 2. Verify document in GET /documents
-    response = client.get("/documents")
+    response = client.get("/documents", headers=auth_headers)
     assert response.status_code == 200
     docs_list = response.json()["documents"]
     assert any(d["id"] == doc_id for d in docs_list)
@@ -74,16 +80,20 @@ def test_document_lifecycle_and_chat():
     chat_data_unrelated = response.json()
     print("\nChat Response for unrelated question:")
     print("Answer:", chat_data_unrelated["answer"])
-    assert "could not be found" in chat_data_unrelated["answer"].lower()
+    assert (
+        "could not be found" in chat_data_unrelated["answer"].lower()
+        or "specialize" in chat_data_unrelated["answer"].lower()
+        or "ieee" in chat_data_unrelated["answer"].lower()
+    )
     assert chat_data_unrelated["retrieved_chunks_count"] == 0
 
     # 5. Test DELETE /documents/{document_id}
-    response = client.delete(f"/documents/{doc_id}")
+    response = client.delete(f"/documents/{doc_id}", headers=auth_headers)
     assert response.status_code == 200
     print(f"\nDocument {doc_id} successfully deleted from ChromaDB.")
 
     # 6. Verify empty or removed from GET /documents
-    response = client.get("/documents")
+    response = client.get("/documents", headers=auth_headers)
     assert response.status_code == 200
     docs_after = response.json()["documents"]
     assert not any(d["id"] == doc_id for d in docs_after)

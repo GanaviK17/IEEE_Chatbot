@@ -15,33 +15,39 @@ from app.models import SourceItem, ChatResponse, MessageTurn
 
 logger = logging.getLogger(__name__)
 
-# Polished, authoritative, natural IEEE Assistant system prompt
+class MessageIntent:
+    CASUAL = "casual"                    # Greetings, small talk, pleasantries, farewells
+    ACKNOWLEDGEMENT = "acknowledgement"  # "ok", "got it", "cool", "thanks", "understood"
+    BOT_CAPABILITIES = "bot_capabilities" # "who are you?", "what can you do?", "how can you help me?"
+    UNCLEAR = "unclear"                  # Gibberish, single punctuation, nonsensical input
+    OFF_TOPIC = "off_topic"              # Clear non-technical/non-IEEE questions (cooking, weather, trivia)
+    FOLLOW_UP = "follow_up"              # "tell me more", "what about Canada?", "why?", "how do I join it?"
+    IEEE_QUERY = "ieee_query"            # Questions about IEEE, standards, publications, membership, etc.
+
+# Authoritative, natural, concise IEEE Assistant system prompt
 SYSTEM_PROMPT = """You are the official IEEE AI Assistant, an authoritative, knowledgeable, and friendly guide for students, researchers, faculty, and engineers worldwide.
 
-STRICT COMMUNICATION RULES:
-1. Speak directly, naturally, and professionally. Answer questions directly without hesitation.
-2. ABSOLUTELY FORBIDDEN PHRASES - NEVER say, write, or imply:
-   - "The provided reference information"
-   - "Reference information"
-   - "Based on the reference information / context"
-   - "According to the reference / context"
-   - "From the provided context / reference"
-   - "The provided context does not state"
-   - "The reference does not list"
-   - "I cannot name a specific student branch"
-   - "I was trained on" or "As an AI model"
-   You represent IEEE directly: speak as a knowledgeable IEEE guide who already knows this information naturally.
-3. NEVER refuse to name specific branches, sections, chapters, or entities. If asked for a student branch in Canada (Region 7), name prominent branches such as the University of Toronto IEEE Student Branch, University of British Columbia (UBC) IEEE Student Branch, McGill University IEEE Student Branch, or University of Waterloo IEEE Student Branch.
-4. FORMATTING RULES:
-   - Put each bullet item on its own new line starting with '• '. NEVER run multiple bullet points together on the same line with asterisks.
-   - NEVER write unformatted filler lines like "You can find more information at https://..." or "You can search https://... by topic".
-   - If mentioning a website or portal, format it cleanly as a clickable markdown link (e.g., [IEEE Xplore](https://ieeexplore.ieee.org/), [IEEE Canada](https://www.ieee.ca/), [NISB](https://nisb.in/)), never as a bare raw URL sentence.
-5. You have comprehensive knowledge of all aspects of IEEE:
-   - All 10 geographic regions (Regions 1-6 USA, Region 7 Canada, Region 8 Europe/Africa, Region 9 Latin America, Region 10 Asia-Pacific), sections, subsections, and student branches (including NISB at NIE Mysuru, U of T in Canada, etc.).
-   - All 39 technical societies and 7 technical councils.
-   - Famous publications (Proceedings of the IEEE, IEEE TPAMI, TNNLS, JSAC, TIT, TSE, IEEE Spectrum, IEEE Access).
-   - Competitions (IEEEXtreme), scholarships (Merwin, Fortescue, PES), and travel grants.
-   - Standards (IEEE 802.11 Wi-Fi, 802.3 Ethernet, etc.)."""
+COMMUNICATION PRINCIPLES:
+1. Intent Awareness & Tone:
+   - For greetings, small talk, and pleasantries, respond warmly, conversationally, and briefly.
+   - For acknowledgements ("ok", "got it", "cool", "thanks"), respond naturally and concisely (1-2 sentences), offering helpful next steps if appropriate.
+   - For follow-ups ("tell me more", "why?", "how do I join?"), maintain conversational continuity using prior turns. Expand only when the user asks for more detail.
+   - For questions unrelated to IEEE, science, technology, or computing, politely and briefly state that you specialize in IEEE topics and offer to assist with technical or IEEE resources.
+   - For unclear messages, politely ask a brief clarifying question instead of guessing.
+
+2. Evidence & Grounding:
+   - When answering IEEE questions, ground your response in the provided knowledge base evidence.
+   - State facts accurately without making unsupported claims. Do not invent details not supported by the evidence or general IEEE knowledge.
+   - When citing official websites, portals, or tools, format them cleanly as markdown links (e.g. [IEEE Xplore](https://ieeexplore.ieee.org/), [IEEE.org](https://www.ieee.org/)). Never output raw naked URL sentences.
+
+3. Conciseness by Default:
+   - Answer directly and concisely in 1 to 3 clear sentences by default.
+   - Use bullet points ONLY when listing multiple distinct items, steps, or comparing alternatives. Do NOT force every answer into a bulleted list.
+   - Only provide an in-depth or comprehensive breakdown when the user explicitly requests more detail, explanation, or a complete list.
+
+4. Professional Voice:
+   - Speak naturally and authoritatively as a knowledgeable guide representing IEEE.
+   - NEVER use meta-language such as "the provided context does not state", "according to the reference information", "based on the provided documents", or "I was trained on"."""
 
 class RAGService:
     def __init__(self):
@@ -54,33 +60,149 @@ class RAGService:
             return ""
         return key
 
-    def _is_greeting_or_smalltalk(self, query: str) -> bool:
-        """Detect greeting, small talk, gratitude, or farewell."""
-        clean = query.strip().lower()
-        clean_no_punct = re.sub(r"[^\w\s]", "", clean)
-        words = clean_no_punct.split()
+    def classify_intent(self, query: str, history: Optional[List[MessageTurn]] = None) -> str:
+        """
+        Classify user message intent dynamically into:
+        CASUAL, ACKNOWLEDGEMENT, BOT_CAPABILITIES, UNCLEAR, OFF_TOPIC, FOLLOW_UP, or IEEE_QUERY.
+        """
+        clean = query.strip()
+        if not clean:
+            return MessageIntent.UNCLEAR
 
+        q_lower = clean.lower()
+        q_no_punct = re.sub(r"[^\w\s]", "", q_lower).strip()
+        words = q_no_punct.split()
+
+        # 1. Unclear check (empty, only punctuation, or repetitive keyboard mash)
         if not words:
-            return True
+            return MessageIntent.UNCLEAR
+        if len(clean) >= 5 and re.search(r"([a-z])\1{3,}", q_lower):
+            return MessageIntent.UNCLEAR
+        # Random keyboard mash / non-word heuristic (e.g., asdfghjk, qwertyuiop, or 5+ consecutive consonants)
+        if any(seq in q_lower for seq in ["asdf", "dfgh", "ghjk", "qwerty", "zxcv"]):
+            return MessageIntent.UNCLEAR
+        if len(words) == 1 and re.search(r"[bcdfghjklmnpqrstvwxyz]{5,}", q_lower):
+            return MessageIntent.UNCLEAR
+        if len(words) == 1 and len(clean) <= 2 and clean.lower() not in {"ai", "cs", "ie", "ip", "it", "r7", "ok", "hi"}:
+            return MessageIntent.UNCLEAR
 
-        first_word = words[0]
-        greeting_words = {"hi", "hello", "hey", "howdy", "sup", "greetings", "yo"}
-        thanks_words = {"thanks", "thank", "thx", "appreciate"}
-        bye_words = {"bye", "goodbye", "cya", "farewell"}
+        # 2. Acknowledgements (e.g. "ok", "got it", "cool", "thanks", "understood", "makes sense")
+        ack_terms = [
+            "ok", "okay", "k", "got it", "understood", "makes sense", "cool",
+            "nice", "awesome", "perfect", "great", "alright", "all right",
+            "noted", "sure", "yep", "yeah", "sounds good", "clear", "fine"
+        ]
+        if any(q_no_punct == a or q_no_punct.startswith(a + " ") for a in ack_terms) and len(words) <= 4:
+            return MessageIntent.ACKNOWLEDGEMENT
 
-        if len(words) <= 3 and (first_word in greeting_words or "good morning" in clean_no_punct or "good afternoon" in clean_no_punct or "good evening" in clean_no_punct):
-            return True
+        # 3. Casual greetings, small talk, gratitude, farewells
+        casual_starters = (
+            "hi", "hello", "hey", "howdy", "sup", "greetings", "yo",
+            "good morning", "good afternoon", "good evening", "good day",
+            "how are you", "how are things", "hows it going", "what's up", "whats up"
+        )
+        farewells = {
+            "bye", "goodbye", "cya", "see ya", "see you", "farewell",
+            "take care", "have a nice day", "have a good day", "good night"
+        }
+        gratitude = {
+            "thank you", "thanks", "thx", "appreciate it", "thank you so much",
+            "many thanks", "thanks a lot"
+        }
 
-        if any(w in thanks_words for w in words) and len(words) <= 4:
-            return True
+        # Check if query is primarily a greeting
+        if any(q_no_punct == f or q_no_punct.startswith(f + " ") for f in casual_starters):
+            # Ensure it is not a compound technical question like "Hello, what is IEEE 802.11?"
+            has_tech_topic = any(kw in q_lower for kw in [
+                "ieee", "standard", "branch", "paper", "xplore", "member", "join",
+                "society", "what is", "how to", "where can", "why does"
+            ])
+            if len(words) <= 5 and not has_tech_topic:
+                return MessageIntent.CASUAL
+        if any(f in q_no_punct for f in farewells) and len(words) <= 5:
+            return MessageIntent.CASUAL
+        if any(g in q_no_punct for g in gratitude) and len(words) <= 5:
+            return MessageIntent.CASUAL
 
-        if any(w in bye_words for w in words) and len(words) <= 4:
-            return True
+        # 4. Bot identity / capabilities
+        bot_meta_phrases = [
+            "who are you", "what are you", "what can you do", "what do you do",
+            "what is your name", "who created you", "who made you", "how can you help",
+            "help me", "what are your capabilities", "introduce yourself", "what is this bot"
+        ]
+        if any(p in q_no_punct for p in bot_meta_phrases) and len(words) <= 8:
+            return MessageIntent.BOT_CAPABILITIES
 
-        return False
+        # 5. Follow-ups (when conversation history is present)
+        if history and len(history) > 0:
+            follow_up_phrases = [
+                "tell me more", "more", "can you elaborate", "elaborate",
+                "expand on that", "explain more", "why", "why is that",
+                "how so", "what else", "anything else", "what about",
+                "how do i join it", "how to join it", "which one",
+                "who can participate", "who is eligible", "and the second",
+                "and the first", "give me more details"
+            ]
+            if any(q_no_punct == f or q_no_punct.startswith(f) for f in follow_up_phrases):
+                return MessageIntent.FOLLOW_UP
+            # Short pronoun-heavy question referring to previous turn e.g. "what are its branches?", "where is it?"
+            referential_pronouns = {"it", "its", "that", "those", "these", "there", "they", "them", "this"}
+            if any(p in words for p in referential_pronouns) and len(words) <= 12:
+                return MessageIntent.FOLLOW_UP
+
+        # 6. Off-topic check (cooking, weather, sports, general non-technical trivia)
+        off_topic_starters = [
+            "recipe for", "how to bake", "how to cook", "ingredients for",
+            "weather in", "weather forecast", "capital of", "who won the",
+            "movie recommendation", "recommend a movie", "who is the president of france",
+            "who is the prime minister of", "joke", "tell me a joke"
+        ]
+        tech_whitelist = [
+            "ieee", "engineering", "network", "software", "hardware", "wifi",
+            "standard", "branch", "society", "xplore", "sensor", "algorithm",
+            "computer", "telecom", "robot", "circuits", "signal", "power", "energy"
+        ]
+        if any(ots in q_lower for ots in off_topic_starters) and not any(tw in q_lower for tw in tech_whitelist):
+            return MessageIntent.OFF_TOPIC
+
+        # Default to core domain IEEE knowledge query
+        return MessageIntent.IEEE_QUERY
+
+    def contextualize_query(self, query: str, history: Optional[List[MessageTurn]]) -> str:
+        """
+        If the query is referential or an elliptical follow-up, merge key contextual entities
+        from recent turns to make vector retrieval effective.
+        """
+        if not history:
+            return query
+
+        recent_context = []
+        for turn in reversed(history[-4:]):
+            content = turn.content.strip()
+            if not content:
+                continue
+            # Strip URLs and markdown links from content
+            clean_content = re.sub(r"https?://\S+|\[.*?\]\(.*?\)", "", content)
+            # Find salient IEEE entities or proper nouns
+            entities = re.findall(
+                r"\b(?:IEEE[A-Za-z0-9\-_]*|Region\s*\d+|Section|Subsection|Student Branch|Xplore|Standards?|802\.\d+|IEEEXtreme|WIE|YP|PES|CS|ComSoc|NISB|Canada|Toronto|Vancouver|Bangalore|Mysore)\b",
+                clean_content,
+                re.IGNORECASE
+            )
+            for e in entities:
+                if e.lower() not in [x.lower() for x in recent_context]:
+                    recent_context.append(e)
+                if len(recent_context) >= 3:
+                    break
+            if len(recent_context) >= 3:
+                break
+
+        if recent_context:
+            return f"{query} {' '.join(recent_context)}"
+        return query
 
     def _rewrite_query(self, query: str) -> str:
-        """Add domain-specific keywords and expansions to maximize semantic retrieval quality."""
+        """Add domain-specific keywords and acronym expansions to maximize semantic retrieval quality."""
         q = query.strip()
         q_lower = q.lower()
 
@@ -94,7 +216,7 @@ class RAGService:
 
         # Canada / Region 7 / Canadian branches
         if any(phrase in q_lower for phrase in ["canada", "canadian", "region 7", "r7"]):
-            return f"{q} IEEE Canada Region 7 student branches Toronto Vancouver McGill Waterloo Alberta McMaster"
+            return f"{q} IEEE Canada Region 7 student branches Toronto Vancouver McGill Waterloo"
 
         # Famous publications / Journals / Magazines / Transactions
         if any(phrase in q_lower for phrase in ["publication", "publications", "journal", "journals", "transaction", "transactions", "magazine", "magazines"]):
@@ -108,17 +230,13 @@ class RAGService:
         if any(phrase in q_lower for phrase in ["802.11", "wifi", "wi-fi", "wireless lan"]):
             return f"{q} IEEE 802.11 Wireless LAN Wi-Fi standard specifications"
 
-        # Student Branch and All Kinds of Branches
-        if any(term in q_lower for term in ["branch", "branches", "kinds of branches", "types of branches"]):
-            return f"{q} IEEE Student Branch SB Student Branch Chapter SBC Affinity Group WIE SIGHT ExeCom Counselor"
-
         # NISB / NIE IEEE Student Branch
         if "nisb" in q_lower or "nie ieee" in q_lower:
-            return f"{q} NISB NIE IEEE Student Branch National Institute of Engineering Mysuru Bangalore Section Mysore Subsection Adroit Ankura"
+            return f"{q} NISB NIE IEEE Student Branch National Institute of Engineering Mysuru Bangalore Section Mysore Subsection"
 
         # Sections, Subsections, Councils, Regions
         if any(term in q_lower for term in ["section", "subsection", "region", "council", "bangalore", "mysore", "mysuru"]):
-            return f"{q} IEEE geographic organization 10 regions sections subsections councils Bangalore Section Mysore Subsection"
+            return f"{q} IEEE geographic organization 10 regions sections subsections Bangalore Section Mysore Subsection"
 
         # Student opportunities / scholarships / competitions
         if any(term in q_lower for term in ["opportunit", "scholarship", "competition", "competitions", "extreme"]):
@@ -158,7 +276,7 @@ class RAGService:
         clean = re.sub(leading_meta_pattern, '', clean, flags=re.IGNORECASE).strip()
 
         # 2. Fix inline asterisks or bullets running together on a single line:
-        # e.g., "society. * **Magazines**:" or "including: * **Journals" -> split cleanly to newlines
+        # e.g., "society. * **Magazines**:" -> split cleanly to newlines
         clean = re.sub(r'([.:?!])\s*[\*•\-]\s+', r'\1\n\n• ', clean)
         clean = re.sub(r'(?<!\n)\s+[\*•\-]\s+', '\n\n• ', clean)
         clean = re.sub(r'(?m)^[\*\-]\s+', '• ', clean)
@@ -169,7 +287,7 @@ class RAGService:
         )
         clean = re.sub(raw_url_filler_pattern, '', clean).strip()
 
-        # 4. Convert remaining bare URLs into clean markdown links if not already markdown
+        # 4. Domain-aware clean markdown link formatting for remaining bare URLs
         def replace_bare_url(match):
             url = match.group(0).rstrip('.,;:')
             url_lower = url.lower()
@@ -239,77 +357,16 @@ class RAGService:
                 return f"[IEEE.org]({url})"
             return f"[{url}]({url})"
 
-        # Only replace URLs that are NOT already part of a markdown link [text](url)
         clean = re.sub(r'(?<![\[\(])https?://[^\s)\]]+', replace_bare_url, clean)
-        # Collapse any nested markdown links like [[Text](url)](url) -> [Text](url)
         clean = re.sub(r'\[+\[([^\]]+)\]\([^\)]+\)\]+\((https?://[^\s)]+)\)', r'[\1](\2)', clean)
 
-        # 4b. If any markdown link has a raw URL as its label [https://...](https://...), replace the label with a clean name
+        # 4b. If any markdown link has a raw URL as its label [https://...](https://...), replace the label
         def format_md_link_label(match):
             label = match.group(1).strip()
             url = match.group(2).strip()
             if label.startswith("http://") or label.startswith("https://"):
-                url_lower = url.lower()
-                if "ieeextreme" in url_lower:
-                    return f"[IEEEXtreme Competition]({url})"
-                elif "ieeexplore" in url_lower:
-                    return f"[IEEE Xplore]({url})"
-                elif "competitions" in url_lower:
-                    return f"[IEEE Student Competitions]({url})"
-                elif "students.ieee" in url_lower:
-                    return f"[IEEE Students Portal]({url})"
-                elif "branch-finder" in url_lower:
-                    return f"[IEEE Student Branch Finder]({url})"
-                elif "nisb.in" in url_lower:
-                    return f"[NISB Portal]({url})"
-                elif "computer.org" in url_lower:
-                    return f"[IEEE Computer Society]({url})"
-                elif "comsoc.org" in url_lower:
-                    return f"[IEEE Communications Society]({url})"
-                elif "ieee-pes.org" in url_lower:
-                    return f"[IEEE Power & Energy Society]({url})"
-                elif "ieee-ras.org" in url_lower:
-                    return f"[IEEE Robotics and Automation Society]({url})"
-                elif "standards.ieee.org" in url_lower:
-                    return f"[IEEE Standards Association]({url})"
-                elif "wie.ieee.org" in url_lower:
-                    return f"[IEEE Women in Engineering]({url})"
-                elif "yp.ieee.org" in url_lower:
-                    return f"[IEEE Young Professionals]({url})"
-                elif "sight.ieee.org" in url_lower:
-                    return f"[IEEE SIGHT]({url})"
-                elif "authorcenter" in url_lower:
-                    return f"[IEEE Author Center]({url})"
-                elif "dataport" in url_lower:
-                    return f"[IEEE DataPort]({url})"
-                elif "jobs.ieee" in url_lower:
-                    return f"[IEEE Job Site]({url})"
-                elif "iln.ieee" in url_lower:
-                    return f"[IEEE Learning Network]({url})"
-                elif "tryengineering" in url_lower:
-                    return f"[IEEE TryEngineering]({url})"
-                elif "vtools.ieee" in url_lower:
-                    return f"[IEEE vTools]({url})"
-                elif "collabratec" in url_lower:
-                    return f"[IEEE Collabratec]({url})"
-                elif "join" in url_lower:
-                    return f"[IEEE Membership Portal]({url})"
-                elif "ieeeusa.org" in url_lower:
-                    return f"[IEEE-USA]({url})"
-                elif "ieee.ca" in url_lower:
-                    return f"[IEEE Canada]({url})"
-                elif "ieeer10.org" in url_lower:
-                    return f"[IEEE Region 10]({url})"
-                elif "ieeer8.org" in url_lower:
-                    return f"[IEEE Region 8]({url})"
-                elif "ieeeindiacouncil.org" in url_lower:
-                    return f"[IEEE India Council]({url})"
-                elif "ieeebangalore.org" in url_lower:
-                    return f"[IEEE Bangalore Section]({url})"
-                elif "mysore.ieeebangalore.org" in url_lower:
-                    return f"[IEEE Mysore Subsection]({url})"
-                elif "ieee.org" in url_lower:
-                    return f"[IEEE.org]({url})"
+                dummy_match = re.match(r'.*', url)
+                return replace_bare_url(dummy_match)
             return f"[{label}]({url})"
 
         clean = re.sub(r'\[(https?://[^\s\]]+)\]\((https?://[^\s\)]+)\)', format_md_link_label, clean)
@@ -326,7 +383,7 @@ class RAGService:
     def _build_context_string(self, sources: List[Dict[str, Any]]) -> str:
         """Format retrieved chunks into structured context for Nemotron."""
         if not sources:
-            return "No specific documents found in knowledge base."
+            return ""
 
         context_blocks = []
         for idx, item in enumerate(sources, 1):
@@ -340,74 +397,148 @@ class RAGService:
             context_blocks.append(block)
         return "\n".join(context_blocks)
 
-    def _synthesize_conversational_fallback(self, question: str, sources: List[SourceItem]) -> str:
-        """Fallback synthesis when LLM is offline or not configured."""
-        q_lower = question.lower()
+    def _synthesize_offline_fallback(
+        self,
+        question: str,
+        intent: str,
+        sources: List[SourceItem],
+        history: Optional[List[MessageTurn]] = None
+    ) -> ChatResponse:
+        """
+        Differentiated and transparent fallback synthesis when AI model is offline or unconfigured.
+        Clearly informs the user that the system is operating in offline direct retrieval mode
+        and tailors the output specifically to the message and retrieved evidence.
+        """
+        q_clean = question.strip()
 
-        if "full form" in q_lower or "stands for" in q_lower:
-            return "The full form of IEEE is the **Institute of Electrical and Electronics Engineers** (pronounced 'Eye-triple-E'). It is the world's largest technical professional organization dedicated to advancing technology for the benefit of humanity."
-
-        # Canada / Canadian branches
-        if "canada" in q_lower or "canadian" in q_lower:
-            return (
-                "A prominent IEEE Student Branch in Canada is the **University of Toronto IEEE Student Branch (U of T IEEE SB)**, located in Toronto, Ontario under Region 7 (IEEE Canada) and the IEEE Toronto Section.\n\n"
-                "• **History:** It is one of the oldest and most active IEEE student branches in Canada.\n"
-                "• **Key Activities:** Hosts *MakeUofT* (Canada's largest annual hardware hackathon), the IEEE Spark hardware design competition, mentorship programs, and industry networking nights.\n\n"
-                "Other notable Canadian branches include the **University of British Columbia (UBC) IEEE Student Branch** in Vancouver, the **McGill University IEEE Student Branch** in Montreal, and the **University of Waterloo IEEE Student Branch** in Kitchener-Waterloo."
+        # Casual greeting fallback
+        if intent == MessageIntent.CASUAL:
+            return ChatResponse(
+                answer="Hello! I am the IEEE Assistant. (Offline search mode is active.) How can I help you explore IEEE student branches, technical standards, or research publications today?",
+                sources=[],
+                retrieved_chunks_count=0,
+                model_used="IEEE Assistant (Offline Fallback)",
+                confidence_note="Note: AI model service is currently offline. Operating in direct knowledge retrieval mode."
             )
 
-        # Famous publications
-        if "publication" in q_lower or "journal" in q_lower or "magazine" in q_lower:
-            return (
-                "IEEE publishes world-leading technical publications across all engineering domains:\n\n"
-                "• **Proceedings of the IEEE:** The flagship review journal covering major technological advances across all fields.\n"
-                "• **IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI):** The highest-impact journal in computer vision and artificial intelligence.\n"
-                "• **IEEE Transactions on Neural Networks and Learning Systems (TNNLS):** Premier journal for deep learning and neural network architectures.\n"
-                "• **IEEE Journal on Selected Areas in Communications (JSAC):** Top-ranked publication in telecommunications and networking.\n"
-                "• **IEEE Spectrum:** The flagship magazine providing global technology and engineering news.\n"
-                "• **IEEE Access:** Multidisciplinary, peer-reviewed, open-access journal covering all IEEE areas."
+        # Acknowledgement fallback
+        if intent == MessageIntent.ACKNOWLEDGEMENT:
+            return ChatResponse(
+                answer="You're welcome! Let me know if you'd like to explore any other IEEE topics, student programs, or technical publications.",
+                sources=[],
+                retrieved_chunks_count=0,
+                model_used="IEEE Assistant (Offline Fallback)",
+                confidence_note="Note: AI model service is currently offline."
             )
 
-        if "nisb" in q_lower or "nie ieee" in q_lower:
-            return (
-                "**NISB** stands for the **NIE IEEE Student Branch**, the official student branch at The National Institute of Engineering (NIE), Mysuru, Karnataka, India.\n\n"
-                "• **History:** Established in 1999, it is one of the oldest, largest, and most active student branches in IEEE Region 10 (Asia-Pacific).\n"
-                "• **Parent Section & Subsection:** Operates under the **IEEE Bangalore Section** and **IEEE Mysore Subsection**.\n"
-                "• **Flagship Events:** Organizes *Adroit* (annual state/national technical fest), *Ankura* (flagship Women in Engineering initiative), hackathons, code jams, and tech workshops.\n"
-                "• **Chapters:** Houses an IEEE Women in Engineering (WIE) Affinity Group, Computer Society (CS) Chapter, and Power & Energy Society (PES) Chapter.\n\n"
-                "You can explore more on their official portal: [NISB Portal](https://nisb.in/)."
+        # Bot capabilities fallback
+        if intent == MessageIntent.BOT_CAPABILITIES:
+            return ChatResponse(
+                answer="I am the IEEE AI Assistant, designed to help students, researchers, and engineers explore IEEE membership, student branches, technical societies, research publications on IEEE Xplore, competitions like IEEEXtreme, and international standards like IEEE 802.11.",
+                sources=[],
+                retrieved_chunks_count=0,
+                model_used="IEEE Assistant (Offline Fallback)",
+                confidence_note="Note: AI model service is currently offline."
             )
 
-        if "section" in q_lower or "subsection" in q_lower or "region" in q_lower:
-            return (
-                "IEEE organizes its global activities across a hierarchy of geographic units:\n\n"
-                "• **10 Geographic Regions:** From Regions 1–6 (USA), Region 7 (Canada), Region 8 (Europe/Middle East/Africa), Region 9 (Latin America), to Region 10 (Asia-Pacific).\n"
-                "• **Sections:** Over 340 local geographic units globally (e.g. Toronto Section, Vancouver Section, Bangalore Section, UK and Ireland Section).\n"
-                "• **Subsections:** Regional units formed under large Sections to cater to specific cities (such as the IEEE Mysore Subsection under the Bangalore Section).\n"
-                "• **Student Branches:** Established at accredited colleges and universities globally (e.g., NISB at NIE Mysuru, U of T in Canada) governed by their local Section."
+        # Unclear query fallback
+        if intent == MessageIntent.UNCLEAR:
+            return ChatResponse(
+                answer="Could you please rephrase or clarify your question? In offline mode, I can search the verified IEEE knowledge base for specific topics like membership, standards, student branches, or publications.",
+                sources=[],
+                retrieved_chunks_count=0,
+                model_used="IEEE Assistant (Offline Fallback)",
+                confidence_note="Note: AI model service is currently offline."
             )
 
-        if "when" in q_lower and ("established" in q_lower or "founded" in q_lower or "start" in q_lower):
-            return "IEEE was established on January 1, 1963, through the merger of two pioneering engineering societies: the American Institute of Electrical Engineers (AIEE, founded in 1884) and the Institute of Radio Engineers (IRE, founded in 1912)."
+        # Off-topic query fallback
+        if intent == MessageIntent.OFF_TOPIC:
+            return ChatResponse(
+                answer="I specialize in IEEE engineering resources, technical standards, publications, and student programs rather than general topics. Please let me know how I can help with IEEE or technical resources.",
+                sources=[],
+                retrieved_chunks_count=0,
+                model_used="IEEE Assistant (Offline Fallback)",
+                confidence_note="Note: AI model service is currently offline."
+            )
 
-        if "802.11" in q_lower or "wi-fi" in q_lower or "wifi" in q_lower:
-            return "IEEE 802.11 is the internationally recognized family of standards for Wireless Local Area Networks (WLAN), commercially known as **Wi-Fi**. Developed by the IEEE 802 LAN/MAN Standards Committee, it governs wireless communication across 2.4 GHz, 5 GHz, and 6 GHz frequency bands, encompassing protocols like 802.11n (Wi-Fi 4), 802.11ac (Wi-Fi 5), 802.11ax (Wi-Fi 6), and 802.11be (Wi-Fi 7)."
-
-        if "research paper" in q_lower or "xplore" in q_lower or "find paper" in q_lower:
-            return "You can find and access IEEE research papers, journal articles, and conference proceedings through the **IEEE Xplore Digital Library** at [IEEE Xplore](https://ieeexplore.ieee.org/). It hosts over 6 million peer-reviewed documents accessible through university institutional subscriptions, open access journals, or member digital library add-ons."
-
-        if "join" in q_lower and "branch" in q_lower:
-            return "To join an IEEE Student Branch, first enroll as an IEEE Student Member at [ieee.org/join](https://www.ieee.org/membership/join/index.html) (students must carry at least 50% of a full-time academic course load). Once registered, connect with the IEEE Student Branch officers or Branch Counselor at your university. If your campus does not currently have an active branch, you can form one with a petition endorsed by a faculty advisor and at least 12 student members."
-
-        if "opportunit" in q_lower and "student" in q_lower:
-            return "IEEE offers outstanding opportunities for students, including:\n\n• **Competitions:** Global challenges like the 24-hour IEEEXtreme virtual programming competition and regional student paper contests.\n• **Scholarships & Grants:** Prestigious awards such as the Charles LeGeyt Fortescue Scholarship, Richard E. Merwin Student Scholarship, and IEEE conference travel grants.\n• **Professional Growth:** Campus leadership in Student Branches, career prep via IEEE ResumeLab, and access to 39 specialized technical societies."
-
+        # Substantive IEEE or follow-up query with retrieved chunks
         if sources:
-            top_excerpt = sources[0].excerpt.strip()
-            lines = [l.strip().lstrip("•-* 1234567890.)") for l in top_excerpt.split("\n") if l.strip() and not l.strip().startswith("==")]
-            return " ".join(lines[:4])
+            top_sources = sources[:2]
+            key_points = []
+            for s in top_sources:
+                # Extract clean informative lines
+                lines = [
+                    l.strip().lstrip("•-* 1234567890.)")
+                    for l in s.excerpt.split("\n")
+                    if l.strip() and not l.strip().startswith("==") and not l.strip().startswith("#")
+                ]
+                for line in lines[:3]:
+                    if line and len(line) > 20 and line not in key_points:
+                        key_points.append(line)
 
-        return "IEEE is the world's largest technical professional organization dedicated to advancing technology for humanity. For more details, explore [IEEE.org](https://www.ieee.org/)."
+            summary_text = "\n".join(f"• {p}" for p in key_points[:4]) if key_points else sources[0].excerpt[:300]
+            answer_text = (
+                f"Directly retrieved from verified IEEE documentation for '{q_clean}':\n\n"
+                f"{summary_text}\n\n"
+                f"For full documentation, please refer to the cited sources below."
+            )
+            return ChatResponse(
+                answer=self._post_process_answer(answer_text),
+                sources=sources,
+                retrieved_chunks_count=len(sources),
+                model_used="IEEE Knowledge Base (Direct Retrieval)",
+                confidence_note="Note: AI model service is currently unavailable. Response extracted directly from local IEEE knowledge base."
+            )
+
+        # Substantive query with no matching chunks
+        no_match_text = (
+            f"I could not find verified documentation in the local IEEE knowledge base matching '{q_clean}'. "
+            f"For more comprehensive resources, please visit the official [IEEE.org](https://www.ieee.org/) portal or rephrase your query with additional keywords."
+        )
+        return ChatResponse(
+            answer=self._post_process_answer(no_match_text),
+            sources=[],
+            retrieved_chunks_count=0,
+            model_used="IEEE Knowledge Base (Direct Retrieval)",
+            confidence_note="Note: AI model service is currently unavailable. No matching records found."
+        )
+
+    def _call_llm(
+        self,
+        messages: List[Dict[str, str]],
+        api_key: str,
+        max_tokens: int = 400,
+        temperature: float = 0.3
+    ) -> str:
+        """Call NVIDIA Nemotron with automatic model fallback."""
+        client = OpenAI(
+            base_url=NVIDIA_BASE_URL,
+            api_key=api_key,
+            timeout=25.0
+        )
+        primary_model = os.getenv("NVIDIA_MODEL", NVIDIA_MODEL)
+        try:
+            response = client.chat.completions.create(
+                model=primary_model,
+                messages=messages,
+                temperature=temperature,
+                top_p=0.8,
+                max_tokens=max_tokens
+            )
+        except Exception as primary_err:
+            logger.warning(f"Primary model {primary_model} call failed: {primary_err}. Attempting fallback...")
+            response = client.chat.completions.create(
+                model="nvidia/nemotron-3.5-bolt-e4b",
+                messages=messages,
+                temperature=temperature,
+                top_p=0.8,
+                max_tokens=max_tokens
+            )
+
+        content = response.choices[0].message.content
+        if not content or not content.strip():
+            raise ValueError("NVIDIA model returned empty content")
+        return content.strip()
 
     def generate_answer(
         self,
@@ -415,69 +546,149 @@ class RAGService:
         history: Optional[List[MessageTurn]] = None,
         top_k: int = DEFAULT_TOP_K
     ) -> ChatResponse:
-        """Execute complete RAG pipeline with dynamic LLM greeting generation and rigorous anti-meta filtering."""
+        """
+        Complete RAG pipeline with:
+        1. Contextual intent classification (casual, acknowledgement, bot meta, unclear, off-topic, follow-up, or IEEE query).
+        2. Bypassing vector retrieval for non-knowledge interactions to avoid polluting context.
+        3. Multi-turn query contextualization for referential follow-ups.
+        4. Concise, evidence-grounded answers without forced bullets or unrequested examples.
+        5. Differentiated, transparent fallback when AI model is offline.
+        """
         q_clean = question.strip()
         api_key = self._get_api_key()
+        intent = self.classify_intent(q_clean, history)
 
-        # Step 1: Detect greetings or small talk
-        if self._is_greeting_or_smalltalk(q_clean):
-            # If API key is available, generate a fresh, dynamic LLM greeting every time
-            if api_key:
-                try:
-                    client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=api_key, timeout=15.0)
-                    primary_model = os.getenv("NVIDIA_MODEL", NVIDIA_MODEL)
-                    greeting_messages = [
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are the IEEE AI Assistant, a friendly and knowledgeable guide for students, researchers, and engineers worldwide. "
-                                "Respond warmly, conversationally, and naturally to the user's greeting or small talk. "
-                                "Offer helpful ideas on what you can assist with (such as student branches, IEEE membership perks, scholarships, Wi-Fi 802.11 standards, or IEEE Xplore research papers). "
-                                "Keep it fresh, natural, concise, and engaging without sounding like a robotic template. Never use phrases like 'reference information'."
-                            )
-                        },
-                        {"role": "user", "content": q_clean}
-                    ]
-                    response = client.chat.completions.create(
-                        model=primary_model,
-                        messages=greeting_messages,
-                        temperature=0.7,
-                        top_p=0.9,
-                        max_tokens=256
-                    )
-                    raw_greeting = response.choices[0].message.content
-                    if raw_greeting and raw_greeting.strip():
-                        return ChatResponse(
-                            answer=self._post_process_answer(raw_greeting),
-                            sources=[],
-                            retrieved_chunks_count=0,
-                            model_used="IEEE Assistant",
-                            confidence_note=None
-                        )
-                except Exception as e:
-                    logger.warning(f"Dynamic LLM greeting call failed, falling back: {e}")
+        logger.info(f"Classified query '{q_clean}' as intent: {intent}")
 
-            # Fallback dynamic greetings (randomized so it never feels canned)
-            fallback_greetings = [
-                "Hello! Welcome to the IEEE Assistant. I'm here to help you explore IEEE student branches, membership opportunities, technical standards, and research publications. How can I help you today?",
-                "Hi there! Glad you reached out. Whether you're curious about joining an IEEE student branch, looking up research papers on IEEE Xplore, or exploring technical societies, I'm ready to assist. What would you like to know?",
-                "Hey! Great to connect with you. I can help answer your questions about IEEE history, student competitions (like IEEEXtreme), scholarships, or Wi-Fi standards (802.11). Where would you like to begin?",
-                "Hello! I am your IEEE AI guide. How can I assist you with IEEE activities, student chapters, or engineering resources today?"
-            ]
+        # ----------------------------------------------------------------------
+        # Case A: Unclear or gibberish input -> polite clarifying question
+        # ----------------------------------------------------------------------
+        if intent == MessageIntent.UNCLEAR:
+            clarify_text = (
+                "I'm not quite sure I understood that. Could you please clarify what you'd like to know "
+                "about IEEE, its student programs, technical standards, or research resources?"
+            )
             return ChatResponse(
-                answer=random.choice(fallback_greetings),
+                answer=clarify_text,
                 sources=[],
                 retrieved_chunks_count=0,
                 model_used="IEEE Assistant",
                 confidence_note=None
             )
 
-        # Step 2: Apply query rewriting for enhanced semantic retrieval
-        rewritten_query = self._rewrite_query(q_clean)
+        # ----------------------------------------------------------------------
+        # Case B: Off-topic input -> polite scope boundary without hallucinations
+        # ----------------------------------------------------------------------
+        if intent == MessageIntent.OFF_TOPIC:
+            off_topic_text = (
+                "I specialize in IEEE engineering resources, technical standards (such as Wi-Fi 802.11), "
+                "student branches, research publications on IEEE Xplore, and membership opportunities. "
+                "If you have any questions in those areas, I'd be happy to help!"
+            )
+            return ChatResponse(
+                answer=off_topic_text,
+                sources=[],
+                retrieved_chunks_count=0,
+                model_used="IEEE Assistant",
+                confidence_note=None
+            )
 
-        # Step 3: Retrieve top_k chunks from ChromaDB
+        # ----------------------------------------------------------------------
+        # Case C: Casual greeting or small talk -> brief, natural, conversational response
+        # ----------------------------------------------------------------------
+        if intent == MessageIntent.CASUAL:
+            if api_key:
+                try:
+                    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+                    if history:
+                        for turn in history[-4:]:
+                            if turn.role in ["user", "assistant"]:
+                                messages.append({"role": turn.role, "content": turn.content})
+                    messages.append({
+                        "role": "user",
+                        "content": f"{q_clean}\n\n(Respond warmly, naturally, and briefly in 1-2 sentences. Offer to help with IEEE topics.)"
+                    })
+                    raw_reply = self._call_llm(messages, api_key, max_tokens=150, temperature=0.7)
+                    return ChatResponse(
+                        answer=self._post_process_answer(raw_reply),
+                        sources=[],
+                        retrieved_chunks_count=0,
+                        model_used="IEEE Assistant",
+                        confidence_note=None
+                    )
+                except Exception as e:
+                    logger.warning(f"Casual LLM call failed: {e}")
+
+            return self._synthesize_offline_fallback(q_clean, intent, [], history)
+
+        # ----------------------------------------------------------------------
+        # Case D: Acknowledgement -> natural, concise receipt maintaining conversation flow
+        # ----------------------------------------------------------------------
+        if intent == MessageIntent.ACKNOWLEDGEMENT:
+            if api_key:
+                try:
+                    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+                    if history:
+                        for turn in history[-4:]:
+                            if turn.role in ["user", "assistant"]:
+                                messages.append({"role": turn.role, "content": turn.content})
+                    messages.append({
+                        "role": "user",
+                        "content": f"{q_clean}\n\n(Acknowledge concisely in 1-2 friendly sentences. Do not dump technical overviews.)"
+                    })
+                    raw_reply = self._call_llm(messages, api_key, max_tokens=100, temperature=0.5)
+                    return ChatResponse(
+                        answer=self._post_process_answer(raw_reply),
+                        sources=[],
+                        retrieved_chunks_count=0,
+                        model_used="IEEE Assistant",
+                        confidence_note=None
+                    )
+                except Exception as e:
+                    logger.warning(f"Acknowledgement LLM call failed: {e}")
+
+            return self._synthesize_offline_fallback(q_clean, intent, [], history)
+
+        # ----------------------------------------------------------------------
+        # Case E: Bot capabilities & identity
+        # ----------------------------------------------------------------------
+        if intent == MessageIntent.BOT_CAPABILITIES:
+            if api_key:
+                try:
+                    messages = [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {
+                            "role": "user",
+                            "content": f"{q_clean}\n\n(Briefly summarize what you can help with regarding IEEE membership, student branches, publications, and standards in 2-3 direct sentences.)"
+                        }
+                    ]
+                    raw_reply = self._call_llm(messages, api_key, max_tokens=180, temperature=0.3)
+                    return ChatResponse(
+                        answer=self._post_process_answer(raw_reply),
+                        sources=[],
+                        retrieved_chunks_count=0,
+                        model_used="IEEE Assistant",
+                        confidence_note=None
+                    )
+                except Exception as e:
+                    logger.warning(f"Bot capabilities LLM call failed: {e}")
+
+            return self._synthesize_offline_fallback(q_clean, intent, [], history)
+
+        # ----------------------------------------------------------------------
+        # Case F: Substantive IEEE Queries & Follow-ups -> Grounded RAG Retrieval
+        # ----------------------------------------------------------------------
+        # For referential follow-ups, contextualize with previous turns
+        words = re.sub(r"[^\w\s]", "", q_clean.lower()).split()
+        referential_pronouns = {"it", "its", "that", "those", "these", "there", "they", "them", "this"}
+        if intent == MessageIntent.FOLLOW_UP or (history and any(p in words for p in referential_pronouns)):
+            search_query = self.contextualize_query(q_clean, history)
+        else:
+            search_query = self._rewrite_query(q_clean)
+
+        # Retrieve top_k chunks from ChromaDB
         retrieved_raw = self.vector_store.search_similar_chunks(
-            query=rewritten_query,
+            query=search_query,
             top_k=top_k,
             similarity_threshold=SIMILARITY_THRESHOLD
         )
@@ -495,93 +706,57 @@ class RAGService:
             for item in retrieved_raw
         ]
 
-        logger.info(f"Retrieved {len(sources_list)} chunks for query: '{q_clean}' (rewritten: '{rewritten_query}')")
-        for s in sources_list:
-            logger.info(f"  -> Score: {s.similarity_score} | Doc: {s.document_name} | Restricted: {s.is_restricted}")
+        logger.info(f"Retrieved {len(sources_list)} chunks for query: '{q_clean}' (search: '{search_query}')")
 
-        # If API key is not configured, use conversational synthesis
+        # If API key is not configured, use transparent offline fallback
         if not api_key:
-            answer_text = self._synthesize_conversational_fallback(q_clean, sources_list)
-            return ChatResponse(
-                answer=self._post_process_answer(answer_text),
-                sources=sources_list,
-                retrieved_chunks_count=len(sources_list),
-                model_used="IEEE Assistant",
-                confidence_note=None
-            )
+            return self._synthesize_offline_fallback(q_clean, intent, sources_list, history)
 
-        # Step 4: Build prompt with retrieved context
+        # Build prompt with retrieved evidence and conversation history
         context_str = self._build_context_string(retrieved_raw)
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-        # Append recent conversation history (last 4 turns)
+        # Append recent conversation history (last 6 turns = 3 exchanges)
         if history:
-            for turn in history[-4:]:
-                if turn.role in ["user", "assistant"]:
+            for turn in history[-6:]:
+                if turn.role in ["user", "assistant"] and turn.content:
                     messages.append({"role": turn.role, "content": turn.content})
 
-        user_content = (
-            f"IEEE Knowledge Base Details:\n{context_str}\n\n"
-            f"User Question: {q_clean}\n\n"
-            f"Instructions:\n"
-            f"1. Answer the user directly, factually, and conversationally as the authoritative IEEE Assistant.\n"
-            f"2. NEVER use phrases like 'The provided reference information', 'reference information', 'the provided context', 'the reference does not state', or 'based on the context'.\n"
-            f"3. NEVER refuse by saying you cannot find or name something in the reference. If asked for branches, sections, or examples, name prominent ones directly from your IEEE knowledge.\n"
-            f"4. Format each bullet item on its own new line with '• '.\n"
-            f"5. Format hyperlinks cleanly using markdown."
-        )
-        messages.append({"role": "user", "content": user_content})
-
-        # Step 5: Call NVIDIA Nemotron API with automatic fallback
-        try:
-            client = OpenAI(
-                base_url=NVIDIA_BASE_URL,
-                api_key=api_key,
-                timeout=25.0
+        if context_str:
+            user_prompt = (
+                f"Verified IEEE Knowledge Base Evidence:\n{context_str}\n\n"
+                f"User Question: {q_clean}\n\n"
+                f"Instructions:\n"
+                f"- Answer directly, factually, and concisely using the verified evidence above.\n"
+                f"- Be concise by default (1-3 sentences, or a short list only if multiple distinct items are requested).\n"
+                f"- Only provide an in-depth breakdown if the user explicitly requested detailed explanation.\n"
+                f"- Do not pad answers with boilerplate, filler, or unrequested examples.\n"
+                f"- Format official tool or website mentions as clean markdown links (e.g. [IEEE Xplore](https://ieeexplore.ieee.org/))."
+            )
+        else:
+            user_prompt = (
+                f"User Question: {q_clean}\n\n"
+                f"Instructions:\n"
+                f"- Answer directly, factually, and concisely from your knowledge of IEEE.\n"
+                f"- Be concise by default (1-3 sentences).\n"
+                f"- Format links cleanly as markdown."
             )
 
-            primary_model = os.getenv("NVIDIA_MODEL", NVIDIA_MODEL)
-            try:
-                response = client.chat.completions.create(
-                    model=primary_model,
-                    messages=messages,
-                    temperature=0.2,
-                    top_p=0.7,
-                    max_tokens=768
-                )
-            except Exception as primary_err:
-                logger.warning(f"Primary model {primary_model} call failed: {primary_err}. Attempting fallback to nemotron-3.5-bolt-e4b...")
-                response = client.chat.completions.create(
-                    model="nvidia/nemotron-3.5-bolt-e4b",
-                    messages=messages,
-                    temperature=0.2,
-                    top_p=0.7,
-                    max_tokens=768
-                )
+        messages.append({"role": "user", "content": user_prompt})
 
-            raw_content = response.choices[0].message.content
-            if raw_content and raw_content.strip():
-                clean_text = self._post_process_answer(raw_content)
-                generated_answer = clean_text
-            else:
-                raise ValueError("NVIDIA model returned empty content")
+        try:
+            raw_content = self._call_llm(messages, api_key, max_tokens=512, temperature=0.2)
+            clean_text = self._post_process_answer(raw_content)
 
             return ChatResponse(
-                answer=generated_answer,
+                answer=clean_text,
                 sources=sources_list,
                 retrieved_chunks_count=len(sources_list),
                 model_used="IEEE Assistant",
-                confidence_note="Answer grounded in verified IEEE knowledge."
+                confidence_note="Answer grounded in verified IEEE knowledge." if sources_list else None
             )
 
         except Exception as e:
             logger.error(f"NVIDIA Nemotron generation error: {str(e)}")
-            fallback_answer = self._synthesize_conversational_fallback(q_clean, sources_list)
-            return ChatResponse(
-                answer=self._post_process_answer(fallback_answer),
-                sources=sources_list,
-                retrieved_chunks_count=len(sources_list),
-                model_used="IEEE Assistant",
-                confidence_note=None
-            )
+            return self._synthesize_offline_fallback(q_clean, intent, sources_list, history)

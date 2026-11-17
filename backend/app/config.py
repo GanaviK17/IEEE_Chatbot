@@ -6,15 +6,15 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ.setdefault("HF_HUB_OFFLINE", "0")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "0")
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 from dotenv import load_dotenv
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = Path(os.getenv("IEEE_DATA_DIR", str(BASE_DIR / "data")))
 CHROMA_PERSIST_DIR = str(DATA_DIR / "chroma_db")
 DOCS_STORAGE_DIR = str(DATA_DIR / "documents")
 SAMPLE_DOCS_DIR = str(BASE_DIR / "sample_docs")

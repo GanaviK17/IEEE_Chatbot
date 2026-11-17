@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 import { 
   ShieldCheck, 
   Lock, 
@@ -54,7 +55,7 @@ export default function AdminPortal({ onBack }) {
 
   const verifyToken = async (authToken) => {
     try {
-      const resp = await fetch('/admin/verify', {
+      const resp = await fetch(`${API_BASE_URL}/admin/verify`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       if (resp.ok) {
@@ -76,7 +77,7 @@ export default function AdminPortal({ onBack }) {
     setLoginLoading(true);
 
     try {
-      const resp = await fetch('/admin/login', {
+      const resp = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,14 +116,14 @@ export default function AdminPortal({ onBack }) {
     setIsLoadingDocs(true);
     try {
       // 1. Fetch public health stats
-      const hResp = await fetch('/health');
+      const hResp = await fetch(`${API_BASE_URL}/health`);
       if (hResp.ok) {
         const hData = await hResp.json();
         setHealthStats(hData);
       }
 
       // 2. Fetch admin-protected documents
-      const dResp = await fetch('/documents', {
+      const dResp = await fetch(`${API_BASE_URL}/documents`, {
         headers: { 'Authorization': `Bearer ${authToken || token}` }
       });
 
@@ -146,7 +147,7 @@ export default function AdminPortal({ onBack }) {
     setFeedback(null);
 
     try {
-      const resp = await fetch('/admin/reindex', {
+      const resp = await fetch(`${API_BASE_URL}/admin/reindex`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -188,7 +189,7 @@ export default function AdminPortal({ onBack }) {
     formData.append('file', file);
 
     try {
-      const resp = await fetch('/upload', {
+      const resp = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -218,7 +219,7 @@ export default function AdminPortal({ onBack }) {
     setIsDeleting(true);
 
     try {
-      const resp = await fetch(`/documents/${documentToDelete.id}`, {
+      const resp = await fetch(`${API_BASE_URL}/documents/${documentToDelete.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

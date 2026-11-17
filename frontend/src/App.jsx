@@ -5,7 +5,7 @@ import AdminPortal from './components/AdminPortal';
 import { useVoice } from './hooks/useVoice';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export default function App() {
   const [currentView, setCurrentView] = useState(() => 
@@ -52,7 +52,7 @@ export default function App() {
     setIsLoadingChat(true);
 
     try {
-      const res = await fetch('/chat', {
+      const res = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

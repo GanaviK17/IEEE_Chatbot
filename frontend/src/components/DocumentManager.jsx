@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileText, Trash2, CheckCircle2, AlertCircle, Loader2, RefreshCw, X, ExternalLink, ShieldCheck } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 export default function DocumentManager({
   documents,
   onUploadSuccess,
@@ -36,7 +38,7 @@ export default function DocumentManager({
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -82,7 +84,7 @@ export default function DocumentManager({
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/documents/${docId}`, {
+      const response = await fetch(`${API_BASE_URL}/documents/${docId}`, {
         method: 'DELETE',
       });
 
