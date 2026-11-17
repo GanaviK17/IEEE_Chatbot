@@ -22,6 +22,7 @@ class VectorStoreManager:
 
     def __init__(self):
         self._embedder = None  # loaded lazily on first use
+        self._query_cache: Dict[str, List[float]] = {}
         
         print(f"Connecting to persistent ChromaDB at: {CHROMA_PERSIST_DIR}...", flush=True)
         self.chroma_client = chromadb.PersistentClient(
@@ -90,7 +91,12 @@ class VectorStoreManager:
         return out
 
     def compute_embedding(self, text: str) -> List[float]:
-        return self._embed([text])[0]
+        if text in self._query_cache:
+            return self._query_cache[text]
+        emb = self._embed([text])[0]
+        if len(self._query_cache) < 1000:
+            self._query_cache[text] = emb
+        return emb
 
     def compute_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         return self._embed(texts)
