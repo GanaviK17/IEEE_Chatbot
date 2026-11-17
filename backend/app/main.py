@@ -1,5 +1,6 @@
 import os
 import shutil
+import threading
 from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,14 +57,39 @@ print("Loading rag_service singleton...", flush=True)
 rag_service = RAGService()
 print("Main module loaded successfully!", flush=True)
 
+def _background_ingest():
+    try:
+        preload_authentic_knowledge_base(force_reload=True)
+        print("Background knowledge base ingestion finished.", flush=True)
+    except Exception as e:
+        print(f"Background ingestion failed: {e}", flush=True)
+
+
+def _warm_up_embedder():
+    try:
+        vector_store.compute_embedding("warm up")
+        print("Embedding model warmed up.", flush=True)
+    except Exception as e:
+        print(f"Embedding warm-up skipped: {e}", flush=True)
+
+
 @app.on_event("startup")
 def startup_event():
-    """Verify knowledge base state on server start."""
+    """Servers with temporary disks start empty, so make sure the knowledge base exists."""
     try:
         count = vector_store.collection.count()
-        print(f"Server started successfully. Active knowledge base contains {count} chunks.", flush=True)
+        if count == 0:
+            loaded = vector_store.load_prebuilt_kb()
+            if loaded:
+                print(f"Restored {loaded} chunks from the prebuilt knowledge base.", flush=True)
+            else:
+                print("No prebuilt knowledge base found: ingesting in the background...", flush=True)
+                threading.Thread(target=_background_ingest, daemon=True).start()
+        else:
+            print(f"Server started. Knowledge base already contains {count} chunks.", flush=True)
+        threading.Thread(target=_warm_up_embedder, daemon=True).start()
     except Exception as e:
-        print(f"Warning during knowledge base verification: {e}", flush=True)
+        print(f"Warning during knowledge base startup: {e}", flush=True)
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 def health_check():

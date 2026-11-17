@@ -10,7 +10,9 @@ from app.config import (
     EMBEDDING_MODEL_NAME,
     DATA_DIR
 )
-from sentence_transformers import SentenceTransformer
+import gzip
+import math
+from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
 # File to store document metadata registry
 CATALOG_PATH = os.path.join(DATA_DIR, "documents_catalog.json")
@@ -19,8 +21,7 @@ class VectorStoreManager:
     _instance = None
 
     def __init__(self):
-        print(f"Initializing SentenceTransformer model: {EMBEDDING_MODEL_NAME}...", flush=True)
-        self.embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        self._embedder = None  # loaded lazily on first use
         
         print(f"Connecting to persistent ChromaDB at: {CHROMA_PERSIST_DIR}...", flush=True)
         self.chroma_client = chromadb.PersistentClient(
@@ -75,15 +76,39 @@ class VectorStoreManager:
         except Exception as e:
             print(f"Error saving catalog: {e}")
 
+    def _embed(self, texts: List[str]) -> List[List[float]]:
+        """all-MiniLM-L6-v2 via ONNX, L2-normalised, in small batches to save memory."""
+        if self._embedder is None:
+            print(f"Loading embedding model {EMBEDDING_MODEL_NAME} (ONNX)...", flush=True)
+            self._embedder = ONNXMiniLM_L6_V2()
+        out: List[List[float]] = []
+        for i in range(0, len(texts), 16):
+            for vec in self._embedder(texts[i:i + 16]):
+                v = [float(x) for x in vec]
+                norm = math.sqrt(sum(x * x for x in v)) or 1.0
+                out.append([x / norm for x in v])
+        return out
+
     def compute_embedding(self, text: str) -> List[float]:
-        """Generate embedding vector for a single query."""
-        embedding = self.embedding_model.encode(text, normalize_embeddings=True)
-        return embedding.tolist()
+        return self._embed([text])[0]
 
     def compute_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
-        """Generate normalized embedding vectors for multiple chunks."""
-        embeddings = self.embedding_model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-        return embeddings.tolist()
+        return self._embed(texts)
+
+    def load_prebuilt_kb(self, path: Optional[str] = None) -> int:
+        """Restore the knowledge base from backend/data/prebuilt_kb.json.gz (no model needed)."""
+        path = path or os.path.join(DATA_DIR, "prebuilt_kb.json.gz")
+        if not os.path.exists(path):
+            return 0
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            data = json.load(f)
+        ids, docs, metas, embs = data["ids"], data["documents"], data["metadatas"], data["embeddings"]
+        for i in range(0, len(ids), 500):
+            self.collection.upsert(ids=ids[i:i + 500], documents=docs[i:i + 500],
+                                   metadatas=metas[i:i + 500], embeddings=embs[i:i + 500])
+        self.catalog = data.get("catalog", {})
+        self._save_catalog()
+        return len(ids)
 
     def add_document_chunks(
         self,
